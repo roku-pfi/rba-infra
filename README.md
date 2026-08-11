@@ -27,8 +27,10 @@ docker compose ps
 |---|---|
 | Redis | `redis://localhost:6379/0` |
 | Postgres (decision) | `postgresql+psycopg://rba:rba@localhost:5432/rba_decision` |
-| Postgres (profile, Phase 4) | `postgresql+psycopg://rba:rba@localhost:5432/rba_profile` |
-| Postgres (audit, Phase 4) | `postgresql+psycopg://rba:rba@localhost:5432/rba_audit` |
+| Postgres (profile) | `postgresql+psycopg://rba:rba@localhost:5432/rba_profile` |
+| Postgres (audit) | `postgresql+psycopg://rba:rba@localhost:5432/rba_audit` |
+| RabbitMQ AMQP | `amqp://rba:rba@localhost:5672/` |
+| RabbitMQ UI | http://localhost:15672 (rba / rba) |
 
 Then run decision-service from its venv (no compose in that repo):
 

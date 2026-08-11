@@ -3,8 +3,8 @@
 # Usage (from this repo):
 #   docker compose up -d
 #
-# Services (decision-service, later profile/audit) connect via localhost URLs —
-# they do NOT own Redis/Postgres. See README.md / ADR notes in ../docs.
+# Services connect via localhost URLs — they do NOT own Redis/Postgres/RabbitMQ.
+# See README.md / ADR notes in ../docs.
 #
 # Database-per-service: one Postgres *server*, multiple databases
 # (see compose/init-databases.sql).
@@ -27,7 +27,6 @@ services:
     environment:
       POSTGRES_USER: rba
       POSTGRES_PASSWORD: rba
-      # Bootstrap DB only; per-service DBs are created by init script.
       POSTGRES_DB: postgres
     ports:
       - "5432:5432"
@@ -40,6 +39,23 @@ services:
       timeout: 3s
       retries: 10
 
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      RABBITMQ_DEFAULT_USER: rba
+      RABBITMQ_DEFAULT_PASS: rba
+    volumes:
+      - rba_rabbitmq_data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
 volumes:
   rba_redis_data:
   rba_postgres_data:
+  rba_rabbitmq_data:
