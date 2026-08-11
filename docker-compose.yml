@@ -1,0 +1,45 @@
+# Shared local data plane for the RBA polyrepo.
+#
+# Usage (from this repo):
+#   docker compose up -d
+#
+# Services (decision-service, later profile/audit) connect via localhost URLs —
+# they do NOT own Redis/Postgres. See README.md / ADR notes in ../docs.
+#
+# Database-per-service: one Postgres *server*, multiple databases
+# (see compose/init-databases.sql).
+
+services:
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - rba_redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: rba
+      POSTGRES_PASSWORD: rba
+      # Bootstrap DB only; per-service DBs are created by init script.
+      POSTGRES_DB: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - rba_postgres_data:/var/lib/postgresql/data
+      - ./compose/init-databases.sql:/docker-entrypoint-initdb.d/01-init-databases.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rba -d postgres"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  rba_redis_data:
+  rba_postgres_data:
