@@ -28,6 +28,7 @@ README.md
   services consume URLs from this stack.
 - Database-per-service = separate *databases* (and later schemas/migrations),
   not a separate Postgres container per service on a laptop.
+- IdP users/apps live in `rba_idp` — never in `rba_decision`.
 - Only commit when explicitly asked; Conventional Commits; never commit secrets.
 
 ## Setup

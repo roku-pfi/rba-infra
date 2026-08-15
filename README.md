@@ -13,7 +13,7 @@ later Helm/GitOps, CI templates, Prometheus/Grafana, gateway config
 | Postgres *server* + per-service DBs | **here** — one server, many DBs |
 | RabbitMQ (Phase 4+) | **here** (when added) |
 | k3d/Tilt/Helm/GitOps | **here** (Phase 0 remainder) |
-| Decision / profile / audit *application* code | respective `rba-*-service` repos |
+| Decision / profile / audit / IdP *application* code | respective `rba-*` repos |
 | Service-owned *schema* (tables) | created by that service on startup / migrations |
 
 ## Local data plane (Phase 0 light)
@@ -29,6 +29,7 @@ docker compose ps
 | Postgres (decision) | `postgresql+psycopg://rba:rba@localhost:5432/rba_decision` |
 | Postgres (profile) | `postgresql+psycopg://rba:rba@localhost:5432/rba_profile` |
 | Postgres (audit) | `postgresql+psycopg://rba:rba@localhost:5432/rba_audit` |
+| Postgres (idp) | `postgresql+psycopg://rba:rba@localhost:5432/rba_idp` |
 | RabbitMQ AMQP | `amqp://rba:rba@localhost:5672/` |
 | RabbitMQ UI | http://localhost:15672 (rba / rba) |
 
