@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: event-publisher
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: event-publisher
+spec:
+  replicas: {{ .Values.apps.eventPublisher.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rba.selector" (dict "root" . "name" "event-publisher") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rba.selector" (dict "root" . "name" "event-publisher") | nindent 8 }}
+    spec:
+      initContainers:
+        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "rabbitmq" "host" "rabbitmq" "port" 5672 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "pdp" "host" "decision-service" "port" .Values.apps.decisionService.port "image" .Values.images.wait) | nindent 8 }}
+      containers:
+        - name: event-publisher
+          image: "{{ .Values.apps.eventPublisher.image }}:{{ .Values.images.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: DECISION_DATABASE_URL
+            - name: RABBITMQ_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: RABBITMQ_URL
+          resources:
+            {{- toYaml .Values.apps.eventPublisher.resources | nindent 12 }}

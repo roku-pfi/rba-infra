@@ -1,0 +1,16 @@
+1. Hosted login (Traefik Ingress, k3d maps host :8080 → :80):
+
+   http://{{ .Values.ingress.host }}:8080/login
+   http://{{ .Values.ingress.host }}:8080/admin
+
+   Seeded demo: demo@example.com / demo-password  (app demo-banking-app)
+   Seeded admin: admin@example.com / admin-password
+   Mock OTP: 000000
+
+2. PDP stays ClusterIP (IdP calls it on the cluster network):
+
+   kubectl -n {{ .Release.Namespace }} port-forward svc/decision-service 8000:8000
+
+3. Status:
+
+   kubectl -n {{ .Release.Namespace }} get pods,svc,hpa,ingress

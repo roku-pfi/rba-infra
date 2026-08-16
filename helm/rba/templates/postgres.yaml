@@ -1,0 +1,114 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-init
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+data:
+  01-init-databases.sql: |
+    -- Keep in sync with compose/init-databases.sql
+    CREATE DATABASE rba_decision;
+    CREATE DATABASE rba_profile;
+    CREATE DATABASE rba_audit;
+    CREATE DATABASE rba_idp;
+    GRANT ALL PRIVILEGES ON DATABASE rba_decision TO {{ .Values.credentials.username }};
+    GRANT ALL PRIVILEGES ON DATABASE rba_profile TO {{ .Values.credentials.username }};
+    GRANT ALL PRIVILEGES ON DATABASE rba_audit TO {{ .Values.credentials.username }};
+    GRANT ALL PRIVILEGES ON DATABASE rba_idp TO {{ .Values.credentials.username }};
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: postgres-data
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources:
+    requests:
+      storage: {{ .Values.dataPlane.postgres.persistence.size }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgres
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: postgres
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "rba.selector" (dict "root" . "name" "postgres") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rba.selector" (dict "root" . "name" "postgres") | nindent 8 }}
+    spec:
+      securityContext:
+        fsGroup: 70
+      containers:
+        - name: postgres
+          image: {{ .Values.dataPlane.postgres.image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: POSTGRES_USER
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: POSTGRES_PASSWORD
+            - name: POSTGRES_DB
+              value: postgres
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
+          resources:
+            {{- toYaml .Values.dataPlane.postgres.resources | nindent 12 }}
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "rba", "-d", "postgres"]
+            periodSeconds: 5
+            timeoutSeconds: 3
+          livenessProbe:
+            exec:
+              command: ["pg_isready", "-U", "rba", "-d", "postgres"]
+            periodSeconds: 15
+            timeoutSeconds: 3
+            initialDelaySeconds: 20
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: postgres-data
+        - name: init
+          configMap:
+            name: postgres-init
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgres
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: postgres
+spec:
+  selector:
+    {{- include "rba.selector" (dict "root" . "name" "postgres") | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

@@ -1,0 +1,126 @@
+# Local-dev defaults. Credentials match compose (rba/rba) — not for production.
+# App images are loaded into k3d via `scripts/k3d-up.sh` (imagePullPolicy: Never).
+
+nameOverride: ""
+fullnameOverride: rba
+
+credentials:
+  username: rba
+  password: rba
+
+images:
+  tag: dev
+  pullPolicy: Never
+  wait: busybox:1.36
+
+dataPlane:
+  redis:
+    image: redis:7-alpine
+    persistence:
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 25m
+        memory: 32Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+  postgres:
+    image: postgres:16-alpine
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  rabbitmq:
+    image: rabbitmq:3.13-management-alpine
+    persistence:
+      size: 1Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 192Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+
+apps:
+  decisionService:
+    image: rba-decision-service
+    replicas: 2
+    port: 8000
+    profileWriteMode: none
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+    hpa:
+      enabled: true
+      minReplicas: 2
+      maxReplicas: 5
+      targetCPUUtilizationPercentage: 70
+  idp:
+    image: rba-idp
+    replicas: 1
+    port: 8001
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 256Mi
+  eventPublisher:
+    image: rba-event-publisher
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+  profileService:
+    image: rba-profile-service
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+  auditService:
+    image: rba-audit-service
+    replicas: 1
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+  auditApi:
+    image: rba-audit-service
+    replicas: 1
+    port: 8002
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 128Mi
+
+ingress:
+  enabled: true
+  className: traefik
+  host: localhost
+  # k3d maps host 8080 → loadbalancer 80 (see k3d/cluster.yaml).

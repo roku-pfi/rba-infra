@@ -1,0 +1,16 @@
+# k3d cluster for the local RBA stack (k3d v5.9 / k3d.io/v1alpha5).
+# Traefik + local-path + metrics-server come from k3s.
+# kubeconfig: updateDefaultKubeconfig + switchCurrentContext default to true.
+apiVersion: k3d.io/v1alpha5
+kind: Simple
+metadata:
+  name: rba
+servers: 1
+agents: 0
+ports:
+  - port: 8080:80
+    nodeFilters:
+      - loadbalancer
+options:
+  k3d:
+    wait: true

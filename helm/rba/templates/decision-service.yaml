@@ -1,0 +1,97 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: decision-service
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: decision-service
+spec:
+  replicas: {{ .Values.apps.decisionService.replicas }}
+  selector:
+    matchLabels:
+      {{- include "rba.selector" (dict "root" . "name" "decision-service") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "rba.selector" (dict "root" . "name" "decision-service") | nindent 8 }}
+    spec:
+      initContainers:
+        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "redis" "host" "redis" "port" 6379 "image" .Values.images.wait) | nindent 8 }}
+      containers:
+        - name: decision-service
+          image: "{{ .Values.apps.decisionService.image }}:{{ .Values.images.tag }}"
+          imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.apps.decisionService.port }}
+          env:
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: REDIS_URL
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: rba-credentials
+                  key: DECISION_DATABASE_URL
+            - name: PROFILE_WRITE_MODE
+              value: {{ .Values.apps.decisionService.profileWriteMode | quote }}
+          resources:
+            {{- toYaml .Values.apps.decisionService.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 18
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: decision-service
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: decision-service
+spec:
+  selector:
+    {{- include "rba.selector" (dict "root" . "name" "decision-service") | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.apps.decisionService.port }}
+      targetPort: http
+{{- if .Values.apps.decisionService.hpa.enabled }}
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: decision-service
+  labels:
+    {{- include "rba.labels" . | nindent 4 }}
+    app.kubernetes.io/name: decision-service
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: decision-service
+  minReplicas: {{ .Values.apps.decisionService.hpa.minReplicas }}
+  maxReplicas: {{ .Values.apps.decisionService.hpa.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.apps.decisionService.hpa.targetCPUUtilizationPercentage }}
+{{- end }}
