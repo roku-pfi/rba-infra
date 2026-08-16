@@ -6,7 +6,9 @@ metadata:
     {{- include "rba.labels" . | nindent 4 }}
     app.kubernetes.io/name: decision-service
 spec:
+  {{- if not .Values.apps.decisionService.hpa.enabled }}
   replicas: {{ .Values.apps.decisionService.replicas }}
+  {{- end }}
   selector:
     matchLabels:
       {{- include "rba.selector" (dict "root" . "name" "decision-service") | nindent 6 }}
@@ -94,4 +96,21 @@ spec:
         target:
           type: Utilization
           averageUtilization: {{ .Values.apps.decisionService.hpa.targetCPUUtilizationPercentage }}
+  behavior:
+    scaleUp:
+      stabilizationWindowSeconds: {{ .Values.apps.decisionService.hpa.scaleUpStabilizationWindowSeconds }}
+      selectPolicy: Max
+      policies:
+        - type: Pods
+          value: 2
+          periodSeconds: 15
+        - type: Percent
+          value: 100
+          periodSeconds: 15
+    scaleDown:
+      stabilizationWindowSeconds: 300
+      policies:
+        - type: Pods
+          value: 1
+          periodSeconds: 60
 {{- end }}

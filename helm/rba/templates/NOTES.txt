@@ -2,6 +2,9 @@
 
    http://{{ .Values.ingress.host }}:8080/login
    http://{{ .Values.ingress.host }}:8080/admin
+{{- if .Values.observability.enabled }}
+   http://{{ .Values.ingress.host }}:8080/grafana   (admin/admin; anonymous Viewer)
+{{- end }}
 
    Seeded demo: demo@example.com / demo-password  (app demo-banking-app)
    Seeded admin: admin@example.com / admin-password
@@ -14,3 +17,7 @@
 3. Status:
 
    kubectl -n {{ .Release.Namespace }} get pods,svc,hpa,ingress
+
+4. Move the PDP HPA (from rba-infra/):
+
+   ./scripts/load-hpa.sh

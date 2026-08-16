@@ -20,9 +20,11 @@ status / decisions live in the **`docs`** repo (`../docs`):
 docker-compose.yml          # Redis + Postgres + RabbitMQ (no-cluster inner loop)
 compose/init-databases.sql  # per-service DBs on first boot
 k3d/cluster.yaml            # local cluster (host 8080 → Traefik 80)
-helm/rba/                   # umbrella chart
+helm/rba/                   # umbrella chart (apps + Prometheus/Grafana)
 scripts/k3d-up.sh           # build, import, helm install
 scripts/k3d-down.sh
+scripts/load-hpa.sh         # K8s-2: load Job that should move the PDP HPA
+load/evaluate_load.py
 README.md
 ```
 
@@ -45,4 +47,5 @@ docker compose up -d
 
 # Graded k8s story (needs k3d + helm + Docker/OrbStack)
 ./scripts/k3d-up.sh
+./scripts/load-hpa.sh   # optional: scale the PDP HPA
 ```

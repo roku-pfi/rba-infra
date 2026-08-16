@@ -71,6 +71,16 @@ k3d image import \
   "rba-audit-service:${TAG}" \
   -c "$CLUSTER"
 
+echo "==> pulling observability images"
+docker pull prom/prometheus:v2.55.1
+docker pull grafana/grafana:11.4.0
+docker pull registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0
+k3d image import \
+  prom/prometheus:v2.55.1 \
+  grafana/grafana:11.4.0 \
+  registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0 \
+  -c "$CLUSTER"
+
 echo "==> helm lint + install"
 helm lint "$INFRA_DIR/helm/rba"
 helm upgrade --install rba "$INFRA_DIR/helm/rba" \
@@ -78,11 +88,23 @@ helm upgrade --install rba "$INFRA_DIR/helm/rba" \
   --create-namespace \
   --kube-context "$KUBE_CONTEXT" \
   --wait \
-  --timeout 5m
+  --timeout 8m
+
+# imagePullPolicy: Never + tag :dev does not change the pod spec, so Helm
+# will not roll Deployments. Restart so the imported images actually run.
+echo "==> restarting app deployments to pick up :dev images"
+for d in decision-service idp event-publisher profile-service audit-service audit-api; do
+  kubectl --context "$KUBE_CONTEXT" -n rba rollout restart "deploy/${d}"
+done
+for d in decision-service idp event-publisher profile-service audit-service audit-api; do
+  kubectl --context "$KUBE_CONTEXT" -n rba rollout status "deploy/${d}" --timeout=2m
+done
 
 echo
 kubectl --context "$KUBE_CONTEXT" -n rba get pods,svc,hpa,ingress
 echo
-echo "IdP:   http://localhost:8080/login"
-echo "Admin: http://localhost:8080/admin"
-echo "PDP:   kubectl --context ${KUBE_CONTEXT} -n rba port-forward svc/decision-service 8000:8000"
+echo "IdP:     http://localhost:8080/login"
+echo "Admin:   http://localhost:8080/admin"
+echo "Grafana: http://localhost:8080/grafana  (admin/admin)"
+echo "PDP:     kubectl --context ${KUBE_CONTEXT} -n rba port-forward svc/decision-service 8000:8000"
+echo "HPA load: ${INFRA_DIR}/scripts/load-hpa.sh"

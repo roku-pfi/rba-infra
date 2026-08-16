@@ -66,6 +66,8 @@ apps:
       minReplicas: 2
       maxReplicas: 5
       targetCPUUtilizationPercentage: 70
+      # Fast scale-up so a 2–3 min load test can move replicas on a laptop.
+      scaleUpStabilizationWindowSeconds: 0
   idp:
     image: rba-idp
     replicas: 1
@@ -124,3 +126,40 @@ ingress:
   className: traefik
   host: localhost
   # k3d maps host 8080 → loadbalancer 80 (see k3d/cluster.yaml).
+
+# K8s-2: in-chart Prometheus + Grafana (not kube-prometheus-stack).
+# Compose mode has no scrape stack — observability is cluster-only.
+observability:
+  enabled: true
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    retention: 6h
+    persistence:
+      size: 2Gi
+    resources:
+      requests:
+        cpu: 50m
+        memory: 128Mi
+      limits:
+        cpu: 500m
+        memory: 512Mi
+  grafana:
+    image: grafana/grafana:11.4.0
+    adminUser: admin
+    adminPassword: admin
+    resources:
+      requests:
+        cpu: 25m
+        memory: 64Mi
+      limits:
+        cpu: 250m
+        memory: 256Mi
+  kubeStateMetrics:
+    image: registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0
+    resources:
+      requests:
+        cpu: 10m
+        memory: 32Mi
+      limits:
+        cpu: 200m
+        memory: 128Mi

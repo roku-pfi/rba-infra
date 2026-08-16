@@ -18,8 +18,8 @@ run their own Redis / Postgres / RabbitMQ containers.
 | Redis (online `ProfileState`) | **here** — one shared cache |
 | Postgres *server* + per-service DBs | **here** — one server, many databases |
 | RabbitMQ (outbox fan-out) | **here** |
-| k3d / Helm | **here** (K8s-1) |
-| Tilt / GitOps / Prometheus | **here** (not started — K8s-2/3) |
+| k3d / Helm | **here** (K8s-1 + K8s-2 Prometheus/Grafana) |
+| Tilt / GitOps / CI templates | **here** (not started — K8s-3) |
 | Decision / profile / audit / IdP *code* + Dockerfiles | respective `rba-*` repos |
 | Service-owned *tables* | created by that service on startup / migrations |
 
@@ -33,9 +33,11 @@ docker-compose.yml            # redis, postgres, rabbitmq + named volumes
 compose/init-databases.sql    # CREATE DATABASE rba_{decision,profile,audit,idp}
 docker/dockerignore           # shared polyrepo-context ignore for image builds
 k3d/cluster.yaml              # k3d cluster rba, host 8080 → Traefik 80
-helm/rba/                     # umbrella chart: data plane + app Deployments
+helm/rba/                     # umbrella chart: data plane + app Deployments + Prometheus/Grafana
 scripts/k3d-up.sh             # build images, import, helm install
 scripts/k3d-down.sh           # k3d cluster delete
+scripts/load-hpa.sh           # in-cluster load Job that should move the PDP HPA
+load/evaluate_load.py         # stdlib hammer for POST /risk/evaluate
 ```
 
 Images: `redis:7-alpine`, `postgres:16-alpine`,
@@ -53,7 +55,7 @@ Do not run both data planes at once — they both want 6379/5432/5672 on the
 host if you also port-forward. k3d keeps datastores ClusterIP (no host bind)
 except the IdP Ingress on **8080**.
 
-## Kubernetes (K8s-1)
+## Kubernetes (K8s-1 + K8s-2)
 
 Needs Docker or OrbStack running, plus:
 
@@ -70,6 +72,7 @@ creates cluster `rba` if missing, imports images, and
 |---|---|
 | http://localhost:8080/login | Hosted IdP login |
 | http://localhost:8080/admin | Admin console |
+| http://localhost:8080/grafana | Grafana (admin/admin; anonymous Viewer). Dashboard **RBA / RBA PDP** |
 
 PDP is ClusterIP only (`decision-service:8000` inside the cluster). To curl
 it from the laptop:
@@ -82,6 +85,16 @@ Tear down: `./scripts/k3d-down.sh` (does not delete built images).
 
 `decision-service` runs **2 replicas** with an HPA (min 2 / max 5, CPU 70%).
 `PUT /policy` is still per-pod; default image policy matches across replicas.
+
+Move the HPA (needs the cluster already up):
+
+```bash
+./scripts/load-hpa.sh
+```
+
+That Job POSTs `/risk/evaluate` until `currentReplicas` rises. Watch it on the
+Grafana **PDP HPA replicas** panel. Scale-down waits ~5 minutes after load
+stops.
 
 ## Local data plane (compose)
 
@@ -137,5 +150,5 @@ docker compose exec postgres \
 
 ## Status
 
-K8s-1 done (k3d + Helm). Compose still supported. Tilt / Prometheus / GitOps /
-CI templates still ahead — `../docs/plans/status.md`.
+K8s-1 (k3d + Helm) and K8s-2 (Prometheus / Grafana + HPA load) are done.
+Compose still supported. Tilt / GitOps / CI templates still ahead — `../docs/plans/status.md`.
