@@ -37,6 +37,10 @@ spec:
               value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
             - name: SEED_APPLICATION_REDIRECT_URI
               value: {{ .Values.apps.idp.seedRedirectUri | quote }}
+            - name: WEBAUTHN_RP_ID
+              value: {{ .Values.apps.idp.webauthnRpId | quote }}
+            - name: WEBAUTHN_ORIGIN
+              value: {{ .Values.apps.idp.webauthnOrigin | quote }}
           resources:
             {{- toYaml .Values.apps.idp.resources | nindent 12 }}
           startupProbe:
