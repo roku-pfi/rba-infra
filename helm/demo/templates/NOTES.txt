@@ -5,6 +5,10 @@
    Sign-in redirects to the IdP (http://localhost:8080/login). Seeded user:
    demo@example.com / demo-password.
 
-2. This app never calls the PDP. Reasons are in IdP admin:
+2. Presenter walkthrough (not linked from the bank home):
+
+   http://{{ .Values.ingress.host }}:8080/walkthrough
+
+3. This app never calls the PDP. Reasons are in IdP admin:
 
    http://localhost:8080/admin
