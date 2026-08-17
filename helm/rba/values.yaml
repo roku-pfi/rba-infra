@@ -72,6 +72,7 @@ apps:
     image: rba-idp
     replicas: 1
     port: 8001
+    seedRedirectUri: http://demo.localhost:8080/callback
     resources:
       requests:
         cpu: 50m

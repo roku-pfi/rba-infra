@@ -1,0 +1,10 @@
+1. Bank (namespace demo, Host demo.localhost):
+
+   http://{{ .Values.ingress.host }}:8080/
+
+   Sign-in redirects to the IdP (http://localhost:8080/login). Seeded user:
+   demo@example.com / demo-password.
+
+2. This app never calls the PDP. Reasons are in IdP admin:
+
+   http://localhost:8080/admin

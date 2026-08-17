@@ -9,6 +9,7 @@
    Seeded demo: demo@example.com / demo-password  (app demo-banking-app)
    Seeded admin: admin@example.com / admin-password
    Mock OTP: 000000
+   Bank (ns demo): http://demo.localhost:8080/
 
 2. PDP stays ClusterIP (IdP calls it on the cluster network):
 

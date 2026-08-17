@@ -54,6 +54,7 @@ build rba-idp/Dockerfile rba-idp
 build rba-event-publisher/Dockerfile rba-event-publisher
 build rba-profile-service/Dockerfile rba-profile-service
 build rba-audit-service/Dockerfile rba-audit-service
+build rba-demo-banking/Dockerfile rba-demo-banking
 
 if k3d cluster get "$CLUSTER" >/dev/null 2>&1; then
   echo "==> cluster ${CLUSTER} already exists"
@@ -69,6 +70,7 @@ k3d image import \
   "rba-event-publisher:${TAG}" \
   "rba-profile-service:${TAG}" \
   "rba-audit-service:${TAG}" \
+  "rba-demo-banking:${TAG}" \
   -c "$CLUSTER"
 
 echo "==> pulling observability images"
@@ -83,8 +85,15 @@ k3d image import \
 
 echo "==> helm lint + install"
 helm lint "$INFRA_DIR/helm/rba"
+helm lint "$INFRA_DIR/helm/demo"
 helm upgrade --install rba "$INFRA_DIR/helm/rba" \
   --namespace rba \
+  --create-namespace \
+  --kube-context "$KUBE_CONTEXT" \
+  --wait \
+  --timeout 8m
+helm upgrade --install demo "$INFRA_DIR/helm/demo" \
+  --namespace demo \
   --create-namespace \
   --kube-context "$KUBE_CONTEXT" \
   --wait \
@@ -96,13 +105,18 @@ echo "==> restarting app deployments to pick up :dev images"
 for d in decision-service idp event-publisher profile-service audit-service audit-api; do
   kubectl --context "$KUBE_CONTEXT" -n rba rollout restart "deploy/${d}"
 done
+kubectl --context "$KUBE_CONTEXT" -n demo rollout restart deploy/demo-banking
 for d in decision-service idp event-publisher profile-service audit-service audit-api; do
   kubectl --context "$KUBE_CONTEXT" -n rba rollout status "deploy/${d}" --timeout=2m
 done
+kubectl --context "$KUBE_CONTEXT" -n demo rollout status deploy/demo-banking --timeout=2m
 
 echo
 kubectl --context "$KUBE_CONTEXT" -n rba get pods,svc,hpa,ingress
 echo
+kubectl --context "$KUBE_CONTEXT" -n demo get pods,svc,ingress
+echo
+echo "Bank:    http://demo.localhost:8080/"
 echo "IdP:     http://localhost:8080/login"
 echo "Admin:   http://localhost:8080/admin"
 echo "Grafana: http://localhost:8080/grafana  (admin/admin)"

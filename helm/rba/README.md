@@ -13,6 +13,7 @@ are not running a cluster ([ADR-0010](../../../docs/decisions/0010-shared-local-
 | redis / postgres / rabbitmq | Deployment + PVC | Same images as compose; Recreate |
 | decision-service | Deployment (2) + HPA | ClusterIP; `/healthz` + `/metrics`; HPA min 2 / max 5 |
 | idp | Deployment + Ingress | Public on `localhost:8080` |
+| demo-banking | separate chart, ns `demo` | Host `demo.localhost:8080`; authenticates via IdP |
 | event-publisher / profile-service / audit-service | Deployment | Workers; no HTTP probes yet |
 | audit-api | Deployment | Same image as audit-service, command `rba-audit-api` |
 | prometheus / grafana / kube-state-metrics | Deployment | K8s-2; Grafana Ingress `/grafana` |

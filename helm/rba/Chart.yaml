@@ -2,5 +2,5 @@ apiVersion: v2
 name: rba
 description: Local k3d stack — shared data plane + RBA application Deployments + Prometheus/Grafana.
 type: application
-version: 0.2.0
-appVersion: "0.2.0"
+version: 0.3.0
+appVersion: "0.3.0"

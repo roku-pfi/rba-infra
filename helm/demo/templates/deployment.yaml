@@ -1,0 +1,59 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: demo-banking
+  labels:
+    app.kubernetes.io/name: demo-banking
+    app.kubernetes.io/part-of: rba-demo
+spec:
+  replicas: {{ .Values.replicas }}
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: demo-banking
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: demo-banking
+        app.kubernetes.io/part-of: rba-demo
+    spec:
+      initContainers:
+        - name: wait-idp
+          image: {{ .Values.waitImage }}
+          command:
+            - sh
+            - -c
+            - until nc -z {{ .Values.idpInternalHost }} {{ .Values.idpInternalPort }}; do echo waiting for idp; sleep 2; done
+      containers:
+        - name: demo-banking
+          image: "{{ .Values.image }}:{{ .Values.tag }}"
+          imagePullPolicy: {{ .Values.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.port }}
+          env:
+            - name: IDP_PUBLIC_URL
+              value: {{ .Values.idpPublicUrl | quote }}
+            - name: IDP_INTERNAL_URL
+              value: "http://{{ .Values.idpInternalHost }}:{{ .Values.idpInternalPort }}"
+            - name: PUBLIC_URL
+              value: {{ .Values.publicUrl | quote }}
+            - name: APPLICATION_ID
+              value: {{ .Values.applicationId | quote }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          startupProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            failureThreshold: 18
+            periodSeconds: 5
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            periodSeconds: 5
