@@ -46,13 +46,21 @@ tofu -chdir="$TOFU/foundation" apply -input=false -auto-approve
 step "destroying the runtime stack (~10–15 min)"
 tofu -chdir="$TOFU/runtime" destroy -input=false -auto-approve
 
-step "leftovers"
-left=$(aws resourcegroupstaggingapi get-resources --tag-filters Key=Stack,Values=runtime \
-  --query 'ResourceTagMappingList[].ResourceARN' --output text)
-k8s_sgs=$(aws ec2 describe-security-groups --filters Name=tag-key,Values=elbv2.k8s.aws/cluster \
-  --query 'SecurityGroups[].GroupId' --output text)
-if [[ -z "$left$k8s_sgs" ]]; then
+step "leftovers (anything that could still bill)"
+# Asks each service for live resources. The tagging API is not used: it keeps
+# listing deleted resources (a NAT gateway in state "deleted", removed
+# security-group rules) for a while after a destroy.
+left=""
+add() { [[ -n "$2" && "$2" != "None" ]] && left+="  $1: $2"$'\n' || true; }
+add "EKS clusters" "$(aws eks list-clusters --query 'clusters[?@==`rokusec`]' --output text)"
+add "NAT gateways" "$(aws ec2 describe-nat-gateways --filter Name=state,Values=pending,available,deleting --query 'NatGateways[].NatGatewayId' --output text)"
+add "RDS" "$(aws rds describe-db-instances --query "DBInstances[?DBInstanceIdentifier=='rokusec'].DBInstanceStatus" --output text 2>/dev/null)"
+add "Valkey" "$(aws elasticache describe-replication-groups --query "ReplicationGroups[?ReplicationGroupId=='rokusec'].Status" --output text 2>/dev/null)"
+add "load balancers" "$(alb_names)"
+add "Elastic IPs" "$(aws ec2 describe-addresses --filters Name=tag:Stack,Values=runtime --query 'Addresses[].PublicIp' --output text)"
+add "EC2 instances" "$(aws ec2 describe-instances --filters Name=tag:eks:cluster-name,Values=rokusec Name=instance-state-name,Values=pending,running,stopping,stopped --query 'Reservations[].Instances[].InstanceId' --output text)"
+if [[ -z "$left" ]]; then
   echo "  none. Back to ≈ US\$1/month (foundation only)."
 else
-  echo "  still tagged runtime: ${left:-none}"; echo "  controller security groups: ${k8s_sgs:-none}"
+  printf 'still present:\n%s' "$left"
 fi
