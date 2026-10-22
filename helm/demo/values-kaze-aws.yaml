@@ -1,0 +1,7 @@
+# Cloud overlay for Kaze Labs, on top of values-aws.yaml and values-kaze.yaml.
+# scripts/aws-up.sh adds image, tag and the CloudFront secret.
+
+publicUrl: https://d14wc5kuicqxf6.cloudfront.net
+
+ingress:
+  host: d14wc5kuicqxf6.cloudfront.net

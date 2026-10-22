@@ -1,13 +1,13 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: demo-banking
+  name: {{ .Values.name }}
   labels:
-    app.kubernetes.io/name: demo-banking
+    app.kubernetes.io/name: {{ .Values.name }}
     app.kubernetes.io/part-of: rba-demo
 spec:
   selector:
-    app.kubernetes.io/name: demo-banking
+    app.kubernetes.io/name: {{ .Values.name }}
   ports:
     - name: http
       port: {{ .Values.port }}

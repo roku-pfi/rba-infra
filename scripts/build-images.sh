@@ -26,6 +26,7 @@ SERVICES=(
   rba-profile-service
   rba-audit-service
   rba-demo-banking
+  rba-demo-kaze
 )
 
 if [[ "$PUSH" -eq 1 ]]; then

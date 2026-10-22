@@ -1,5 +1,7 @@
 # Tenant app (namespace demo). Platform stays in the `rba` release.
+# One release per app: Roku Bank with these defaults, Kaze Labs with values-kaze.yaml.
 
+name: demo-banking
 image: rba-demo-banking
 tag: dev
 pullPolicy: Never

@@ -98,7 +98,9 @@ apps:
     webauthnOrigin: http://localhost:8080
     # Extra environment (cloud: DEPLOYMENT=cloud and its settings), and
     # variables read from keys of the credentials Secret.
-    env: {}
+    env:
+      # Kaze Labs' portal (U-5), served at kaze.localhost by the `kaze` release.
+      SEED_KAZE_REDIRECT_URI: http://kaze.localhost:8080/callback
     secretEnv: {}
     resources:
       requests:

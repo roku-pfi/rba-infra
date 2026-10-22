@@ -55,6 +55,7 @@ build rba-event-publisher/Dockerfile rba-event-publisher
 build rba-profile-service/Dockerfile rba-profile-service
 build rba-audit-service/Dockerfile rba-audit-service
 build rba-demo-banking/Dockerfile rba-demo-banking
+build rba-demo-kaze/Dockerfile rba-demo-kaze
 
 if k3d cluster get "$CLUSTER" >/dev/null 2>&1; then
   echo "==> cluster ${CLUSTER} already exists"
@@ -71,6 +72,7 @@ k3d image import \
   "rba-profile-service:${TAG}" \
   "rba-audit-service:${TAG}" \
   "rba-demo-banking:${TAG}" \
+  "rba-demo-kaze:${TAG}" \
   -c "$CLUSTER"
 
 echo "==> pulling observability images"
@@ -98,6 +100,12 @@ helm upgrade --install demo "$INFRA_DIR/helm/demo" \
   --kube-context "$KUBE_CONTEXT" \
   --wait \
   --timeout 8m
+helm upgrade --install kaze "$INFRA_DIR/helm/demo" \
+  -f "$INFRA_DIR/helm/demo/values-kaze.yaml" \
+  --namespace demo \
+  --kube-context "$KUBE_CONTEXT" \
+  --wait \
+  --timeout 8m
 
 # imagePullPolicy: Never + tag :dev does not change the pod spec, so Helm
 # will not roll Deployments. Restart so the imported images actually run.
@@ -105,11 +113,12 @@ echo "==> restarting app deployments to pick up :dev images"
 for d in decision-service idp event-publisher profile-service audit-service audit-api; do
   kubectl --context "$KUBE_CONTEXT" -n rba rollout restart "deploy/${d}"
 done
-kubectl --context "$KUBE_CONTEXT" -n demo rollout restart deploy/demo-banking
+kubectl --context "$KUBE_CONTEXT" -n demo rollout restart deploy/demo-banking deploy/demo-kaze
 for d in decision-service idp event-publisher profile-service audit-service audit-api; do
   kubectl --context "$KUBE_CONTEXT" -n rba rollout status "deploy/${d}" --timeout=2m
 done
 kubectl --context "$KUBE_CONTEXT" -n demo rollout status deploy/demo-banking --timeout=2m
+kubectl --context "$KUBE_CONTEXT" -n demo rollout status deploy/demo-kaze --timeout=2m
 
 echo
 kubectl --context "$KUBE_CONTEXT" -n rba get pods,svc,hpa,ingress

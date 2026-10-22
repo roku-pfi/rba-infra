@@ -1,0 +1,12 @@
+# Kaze Labs' portal (U-5): a second release of this chart.
+#   helm upgrade --install kaze helm/demo -n demo -f helm/demo/values-kaze.yaml
+
+name: demo-kaze
+image: rba-demo-kaze
+port: 8003
+publicUrl: http://kaze.localhost:8080
+# Public client id at the IdP (rba_idp.client_ids.SEEDED).
+clientId: rk_Kz3sH8dYc5JfW1qN
+
+ingress:
+  host: kaze.localhost

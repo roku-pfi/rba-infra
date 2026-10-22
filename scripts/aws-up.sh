@@ -31,7 +31,7 @@ BUCKET="rokusec-tofu-state-$ACCOUNT"
 REGISTRY="$ACCOUNT.dkr.ecr.$AWS_REGION.amazonaws.com"
 
 # ---------------------------------------------------------------- images
-SERVICES=(rba-decision-service rba-idp rba-event-publisher rba-profile-service rba-audit-service rba-demo-banking)
+SERVICES=(rba-decision-service rba-idp rba-event-publisher rba-profile-service rba-audit-service rba-demo-banking rba-demo-kaze)
 heads=""; dirty=0
 for svc in "${SERVICES[@]}" rba-contracts rba-features; do
   heads+="$svc $(git -C "$ROOT/$svc" rev-parse HEAD)"$'\n'
@@ -86,6 +86,14 @@ ingress:
   annotations:
     alb.ingress.kubernetes.io/security-groups: "$(rt alb_security_group_id)"
 YAML
+cat > "$SESSION_DIR/kaze.yaml" <<YAML
+image: "$REGISTRY/rba-demo-kaze"
+tag: "$TAG"
+ingress:
+  originVerify: "$(fd origin_verify_header)"
+  annotations:
+    alb.ingress.kubernetes.io/security-groups: "$(rt alb_security_group_id)"
+YAML
 chmod 600 "$SESSION_DIR"/*.yaml
 
 step "helm: rba (init Jobs first, then the services)"
@@ -95,6 +103,11 @@ helm upgrade --install rba "$INFRA_DIR/helm/rba" --kube-context "$CTX" \
 step "helm: demo (Roku Bank)"
 helm upgrade --install demo "$INFRA_DIR/helm/demo" --kube-context "$CTX" \
   --namespace demo --create-namespace -f "$INFRA_DIR/helm/demo/values-aws.yaml" -f "$SESSION_DIR/demo.yaml" \
+  --wait --timeout 10m
+step "helm: kaze (Kaze Labs)"
+helm upgrade --install kaze "$INFRA_DIR/helm/demo" --kube-context "$CTX" \
+  --namespace demo -f "$INFRA_DIR/helm/demo/values-aws.yaml" -f "$INFRA_DIR/helm/demo/values-kaze.yaml" \
+  -f "$INFRA_DIR/helm/demo/values-kaze-aws.yaml" -f "$SESSION_DIR/kaze.yaml" \
   --wait --timeout 10m
 
 # ---------------------------------------------------------------- edge

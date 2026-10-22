@@ -2,9 +2,9 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-  name: demo-banking
+  name: {{ .Values.name }}
   labels:
-    app.kubernetes.io/name: demo-banking
+    app.kubernetes.io/name: {{ .Values.name }}
     app.kubernetes.io/part-of: rba-demo
   {{- if or .Values.ingress.annotations .Values.ingress.originVerify }}
   annotations:
@@ -13,7 +13,7 @@ metadata:
     {{- end }}
     {{- with .Values.ingress.originVerify }}
     # Only requests that came through CloudFront (secret header) are routed.
-    alb.ingress.kubernetes.io/conditions.demo-banking: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
+    alb.ingress.kubernetes.io/conditions.{{ .Values.name }}: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     {{- end }}
   {{- end }}
@@ -29,7 +29,7 @@ spec:
             pathType: Prefix
             backend:
               service:
-                name: demo-banking
+                name: {{ .Values.name }}
                 port:
                   number: {{ .Values.port }}
 {{- end }}
