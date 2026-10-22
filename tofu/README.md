@@ -29,6 +29,26 @@ tofu output hosts                             # the three https://*.cloudfront.n
 CloudFront distributions take a few minutes to deploy. Until the runtime stack
 exists they point at a name that does not resolve and answer 502.
 
+## Each session (runtime)
+
+```bash
+cd runtime
+cp terraform.tfvars.example terraform.tfvars   # state_bucket
+tofu init -backend-config="bucket=rokusec-tofu-state-$(aws sts get-caller-identity --query Account --output text)"
+tofu plan                                       # review first: this one costs money by the hour
+tofu apply                                      # ~20 min (EKS control plane)
+$(tofu output -raw kubeconfig_command)
+# … session …
+tofu destroy                                    # back to ≈ US$1/month
+```
+
+Creates: NAT gateway + route, EKS (Graviton `t4g.medium` × 2, metrics-server,
+Pod Identity), the AWS Load Balancer Controller, RDS PostgreSQL 16
+(`db.t4g.micro`, TLS), ElastiCache Valkey 8 (`cache.t4g.micro`, TLS), every
+password, the `rba-credentials` Secret the chart references
+(`credentials.existingSecret`), and a Job that creates one database and login
+role per service. The charts themselves are installed by I-3/I-4.
+
 ## Notes
 
 - `*.tfstate`, `terraform.tfvars` and `.terraform/` are gitignored.
