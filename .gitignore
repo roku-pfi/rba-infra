@@ -15,3 +15,6 @@ crash.log
 
 # attackers.tf: zipped Lambda package
 .build/
+
+# e2e: local virtualenv
+e2e/.venv/
