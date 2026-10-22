@@ -29,6 +29,12 @@ resource "random_password" "simulation" {
   special = false
 }
 
+# The presenter panel's password (D-1). Only scripts/aws-up.sh hands it to the bank.
+resource "random_password" "presenter" {
+  length  = 24
+  special = false
+}
+
 resource "kubernetes_namespace_v1" "app" {
   metadata { name = var.app_namespace }
   depends_on = [module.eks]

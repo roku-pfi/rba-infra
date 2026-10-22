@@ -54,6 +54,10 @@ spec:
                 secretKeyRef:
                   name: {{ include "rba.secretName" $ }}
                   key: REDIS_URL
+            # Demo home histories (TEST-NET). Empty in the cloud, where they
+            # never match a real login: real logins build the profile there.
+            - name: SEED_PROFILE_USER_IDS
+              value: {{ $.Values.apps.profileService.seedProfiles | quote }}
             {{- end }}
 {{- end }}
 {{- end }}

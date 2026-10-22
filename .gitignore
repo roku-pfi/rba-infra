@@ -12,3 +12,6 @@ crash.log
 
 # scripts/aws-up.sh: generated per-session Helm values (contain secrets)
 .session/
+
+# attackers.tf: zipped Lambda package
+.build/

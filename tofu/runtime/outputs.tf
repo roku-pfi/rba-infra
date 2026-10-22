@@ -39,3 +39,9 @@ output "simulation_secret" {
   value       = random_password.simulation.result
   sensitive   = true
 }
+
+output "presenter_secret" {
+  description = "Password of the presenter panel at https://<bank>/presenter."
+  value       = random_password.presenter.result
+  sensitive   = true
+}

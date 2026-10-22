@@ -61,3 +61,7 @@ apps:
     secretEnv:
       SEED_PASSWORD_SUFFIX: IDP_SEED_PASSWORD_SUFFIX
       SIMULATION_SECRET: SIMULATION_SECRET
+  profileService:
+    # The TEST-NET home history never matches a real login: Martín's first
+    # phone login scored CRITICAL against it. Real logins build the profile.
+    seedProfiles: ""

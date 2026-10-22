@@ -121,6 +121,8 @@ apps:
         memory: 128Mi
   profileService:
     image: rba-profile-service
+    # Users whose demo home history the init Job seeds (comma-separated).
+    seedProfiles: usr_rb_martin,usr_kz_martin
     replicas: 1
     resources:
       requests:

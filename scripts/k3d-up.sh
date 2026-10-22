@@ -94,7 +94,10 @@ helm upgrade --install rba "$INFRA_DIR/helm/rba" \
   --kube-context "$KUBE_CONTEXT" \
   --wait \
   --timeout 8m
+# The bank carries the presenter panel (D-1): the PDP for "load", Redis for "reset".
 helm upgrade --install demo "$INFRA_DIR/helm/demo" \
+  --set-string env.PDP_URL=http://decision-service.rba.svc.cluster.local:8000 \
+  --set-string env.REDIS_URL=redis://redis.rba.svc.cluster.local:6379/0 \
   --namespace demo \
   --create-namespace \
   --kube-context "$KUBE_CONTEXT" \

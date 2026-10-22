@@ -5,9 +5,9 @@
    Sign-in redirects to the IdP (http://localhost:8080/login). Seeded user:
    martin@correo.example / martin-demo.
 
-2. Presenter walkthrough (not linked from the bank home):
+2. Presenter panel (not linked from the bank home):
 
-   http://{{ .Values.ingress.host }}:8080/walkthrough
+   http://{{ .Values.ingress.host }}:8080/presenter
 
 3. This app never calls the PDP. Reasons are in IdP admin:
 

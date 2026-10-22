@@ -78,14 +78,35 @@ apps:
     env:
       TRUSTED_PROXY_CIDRS: "$(rt trusted_proxy_cidrs)"
 YAML
-cat > "$SESSION_DIR/demo.yaml" <<YAML
+# The bank also carries the presenter panel (D-1): attacker Lambdas (I-6, in
+# the foundation stack), the simulation secret, the profile store for "reset"
+# and the PDP for "load".
+attacker_urls() {
+  fdj attacker_urls 2>/dev/null | python3 -c 'import json,sys
+try: print(",".join(f"{k}={v}" for k, v in sorted(json.load(sys.stdin).items())))
+except ValueError: print("")'
+}
+demo_values() {
+  cat > "$SESSION_DIR/demo.yaml" <<YAML
 image: "$REGISTRY/rba-demo-banking"
 tag: "$TAG"
 ingress:
   originVerify: "$(fd origin_verify_header)"
   annotations:
     alb.ingress.kubernetes.io/security-groups: "$(rt alb_security_group_id)"
+env:
+  PRESENTER_SECRET: "$(rt presenter_secret)"
+  VICTIM_PASSWORD: "martin-$(rt seed_password_suffix)"
+  ATTACKER_URLS: "$1"
+  ATTACKER_SECRET: "$(fd attacker_secret 2>/dev/null || true)"
+  SIMULATION_SECRET: "$(rt simulation_secret)"
+  REDIS_URL: "rediss://$(rt valkey_endpoint):6379/0"
+  PDP_URL: "http://decision-service.rba.svc.cluster.local:8000"
 YAML
+  chmod 600 "$SESSION_DIR/demo.yaml"
+}
+ATTACKERS=$(attacker_urls)
+demo_values "$ATTACKERS"
 cat > "$SESSION_DIR/kaze.yaml" <<YAML
 image: "$REGISTRY/rba-demo-kaze"
 tag: "$TAG"
@@ -127,6 +148,16 @@ for id in $(fdj distribution_ids | python3 -c 'import json,sys;print(" ".join(js
   aws cloudfront wait distribution-deployed --id "$id"
 done
 
+# The same apply creates the attacker Lambdas the first time; hand them to the bank.
+if [[ "$(attacker_urls)" != "$ATTACKERS" ]]; then
+  step "helm: demo again, with the attacker Lambdas"
+  ATTACKERS=$(attacker_urls)
+  demo_values "$ATTACKERS"
+  helm upgrade --install demo "$INFRA_DIR/helm/demo" --kube-context "$CTX" \
+    --namespace demo -f "$INFRA_DIR/helm/demo/values-aws.yaml" -f "$SESSION_DIR/demo.yaml" \
+    --wait --timeout 10m
+fi
+
 step "smoke test"
 for host in "$AUTH" "$BANK"; do
   for _ in $(seq 30); do
@@ -144,6 +175,7 @@ $(printf '\033[1m')RokuSec is up.$(printf '\033[0m')  Remember: about US\$0.27/h
   Console      https://$AUTH/admin
   Roku Bank    https://$BANK/
   Grafana      https://$AUTH/grafana   (admin / tofu -chdir=tofu/runtime output -raw grafana_admin_password)
+  Presenter    https://$BANK/presenter (tofu -chdir=tofu/runtime output -raw presenter_secret)
 
   Fresh databases: nobody has a passkey yet. First, the platform operator:
     kubectl -n rba exec deploy/idp -c idp -- python -m rba_idp.activation juan@rokusec.example --tenant rokusec
