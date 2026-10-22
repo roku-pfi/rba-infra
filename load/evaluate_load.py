@@ -20,7 +20,9 @@ from datetime import datetime, timezone
 TARGET = os.environ.get("PDP_URL", "http://decision-service:8000").rstrip("/")
 DURATION = float(os.environ.get("DURATION_SECONDS", "180"))
 WORKERS = int(os.environ.get("WORKERS", "24"))
-APP_ID = os.environ.get("APPLICATION_ID", "demo-banking-app")
+APP_ID = os.environ.get("APPLICATION_ID", "roku-bank-web")
+# ADR-0033: every evaluation names its tenant; the PDP 404s an unknown one.
+TENANT_ID = os.environ.get("TENANT_ID", "roku-bank")
 
 USERS = [f"load-user-{i}" for i in range(80)]
 IPS = [f"203.0.113.{i}" for i in range(1, 80)]
@@ -33,6 +35,7 @@ BROWSERS = ["Chrome", "Firefox", "Safari"]
 def _one() -> int:
     body = {
         "event_id": str(uuid.uuid4()),
+        "tenant_id": TENANT_ID,
         "application_id": APP_ID,
         "user_id": random.choice(USERS),
         "timestamp": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),

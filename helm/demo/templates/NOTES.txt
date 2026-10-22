@@ -3,7 +3,7 @@
    http://{{ .Values.ingress.host }}:8080/
 
    Sign-in redirects to the IdP (http://localhost:8080/login). Seeded user:
-   demo@example.com / demo-password.
+   martin@correo.example / martin-demo.
 
 2. Presenter walkthrough (not linked from the bank home):
 

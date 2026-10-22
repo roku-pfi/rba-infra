@@ -6,8 +6,11 @@
    http://{{ .Values.ingress.host }}:8080/grafana   (admin/admin; anonymous Viewer)
 {{- end }}
 
-   Seeded demo: demo@example.com / demo-password  (app demo-banking-app)
-   Seeded admin: admin@example.com / admin-password
+   Seeded customer: martin@correo.example / martin-demo  (app roku-bank-web)
+   Console (/console/login, tenant from the email domain):
+     diego@rokubank.example / diego-demo   (Roku Bank)
+     lucas@kazelabs.example / lucas-demo   (Kaze Labs)
+     juan@rokusec.example   / juan-demo    (platform operator)
    Mock OTP: 000000
    Bank (ns demo): http://demo.localhost:8080/
 

@@ -10,7 +10,7 @@ idpPublicUrl: http://localhost:8080
 idpInternalHost: idp.rba.svc.cluster.local
 idpInternalPort: 8001
 publicUrl: http://demo.localhost:8080
-applicationId: demo-banking-app
+applicationId: roku-bank-web
 
 resources:
   requests:

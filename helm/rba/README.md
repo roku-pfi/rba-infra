@@ -18,9 +18,11 @@ are not running a cluster ([ADR-0010](../../../docs/decisions/0010-shared-local-
 | audit-api | Deployment | Same image as audit-service, command `rba-audit-api` |
 | prometheus / grafana / kube-state-metrics | Deployment | K8s-2; Grafana Ingress `/grafana` |
 
-`PUT /policy` is still in-process + per-pod YAML. Default policy from the
-image is identical across replicas; a live PUT will not fan out. Shared
-policy store is a follow-up.
+Tenant policies live in Postgres (`rba_decision.tenant_policies`, ADR-0033):
+every PDP replica reads the same rows and caches them for
+`POLICY_CACHE_SECONDS` (5 s), so `PUT /tenants/{tenant_id}/policy` reaches all
+replicas within that window and survives restarts. The image's
+`config/policies/*.yaml` only seed tenants that have no row yet.
 
 Grafana: http://localhost:8080/grafana (`admin` / `admin`). Provisioned dashboard
 **RBA / RBA PDP** (decision mix, score heatmap, p95/p99, HPA replicas). Load the
