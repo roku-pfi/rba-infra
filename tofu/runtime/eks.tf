@@ -16,6 +16,14 @@ module "eks" {
   # Whoever runs `tofu apply` administers the cluster.
   enable_cluster_creator_admin_permissions = true
 
+  # Per-session cluster: no customer-managed KMS key (US$1/month each, a new
+  # one per apply; EKS already encrypts Secrets with an AWS-owned key) and no
+  # control-plane logs in CloudWatch (billed per GB, the audit log is chatty).
+  create_kms_key              = false
+  encryption_config           = null
+  enabled_log_types           = []
+  create_cloudwatch_log_group = false
+
   addons = {
     vpc-cni                = { before_compute = true }
     kube-proxy             = {}
@@ -32,11 +40,12 @@ module "eks" {
       min_size       = var.node_count
       max_size       = var.node_count + 1
       desired_size   = var.node_count
-      subnet_ids     = local.f.private_subnet_ids
+      # Nodes need the NAT route to bootstrap and pull images. Referencing the
+      # route here orders the node group after it, without delaying the rest
+      # of the module (a module-level depends_on defers its data sources).
+      subnet_ids = [for id in local.f.private_subnet_ids : id if aws_route.private_default.id != ""]
     }
   }
-
-  depends_on = [aws_route.private_default]
 }
 
 # ---------------------------------------------------------------- load balancer controller

@@ -4,7 +4,11 @@
 
 locals {
   # With the VPC CNI, pods use their node's security groups.
-  workload_security_groups = [module.eks.node_security_group_id, module.eks.cluster_primary_security_group_id]
+  # Static keys: the IDs are only known after apply.
+  workload_security_groups = {
+    nodes   = module.eks.node_security_group_id
+    cluster = module.eks.cluster_primary_security_group_id
+  }
 }
 
 # ---------------------------------------------------------------- PostgreSQL
@@ -21,7 +25,7 @@ resource "aws_security_group" "db" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "db_from_workloads" {
-  for_each                     = toset(local.workload_security_groups)
+  for_each                     = local.workload_security_groups
   security_group_id            = aws_security_group.db.id
   referenced_security_group_id = each.value
   ip_protocol                  = "tcp"
@@ -74,7 +78,7 @@ resource "aws_security_group" "cache" {
 }
 
 resource "aws_vpc_security_group_ingress_rule" "cache_from_workloads" {
-  for_each                     = toset(local.workload_security_groups)
+  for_each                     = local.workload_security_groups
   security_group_id            = aws_security_group.cache.id
   referenced_security_group_id = each.value
   ip_protocol                  = "tcp"
