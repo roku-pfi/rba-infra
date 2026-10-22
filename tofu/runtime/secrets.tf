@@ -19,6 +19,11 @@ resource "random_password" "seed_suffix" {
   special = false
 }
 
+resource "random_password" "grafana" {
+  length  = 24
+  special = false
+}
+
 resource "random_password" "simulation" {
   length  = 48
   special = false
@@ -55,6 +60,7 @@ resource "kubernetes_secret_v1" "credentials" {
     AUDIT_DATABASE_URL       = local.db_url["rba_audit"]
     IDP_SEED_PASSWORD_SUFFIX = random_password.seed_suffix.result
     SIMULATION_SECRET        = random_password.simulation.result
+    GRAFANA_ADMIN_PASSWORD   = random_password.grafana.result
   }
 }
 

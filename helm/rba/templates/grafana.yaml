@@ -67,7 +67,14 @@ spec:
             - name: GF_SECURITY_ADMIN_USER
               value: {{ .Values.observability.grafana.adminUser | quote }}
             - name: GF_SECURITY_ADMIN_PASSWORD
+              {{- if .Values.observability.grafana.adminPasswordKey }}
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rba.secretName" . }}
+                  key: {{ .Values.observability.grafana.adminPasswordKey }}
+              {{- else }}
               value: {{ .Values.observability.grafana.adminPassword | quote }}
+              {{- end }}
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
             - name: GF_AUTH_ANONYMOUS_ENABLED
@@ -75,7 +82,7 @@ spec:
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE
               value: Viewer
             - name: GF_SERVER_ROOT_URL
-              value: "http://{{ .Values.ingress.host }}:8080/grafana"
+              value: "{{ .Values.ingress.publicUrl | default (printf "http://%s:8080" .Values.ingress.host) }}/grafana"
             - name: GF_SERVER_SERVE_FROM_SUB_PATH
               value: "true"
             - name: GF_PATHS_PROVISIONING
@@ -145,6 +152,10 @@ metadata:
   labels:
     {{- include "rba.labels" . | nindent 4 }}
     app.kubernetes.io/name: grafana
+  {{- with include "rba.ingressAnnotations" (dict "root" . "service" "grafana" "health" "/grafana/api/health") | trim }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

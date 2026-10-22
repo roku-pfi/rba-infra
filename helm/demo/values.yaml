@@ -11,6 +11,8 @@ idpInternalHost: idp.rba.svc.cluster.local
 idpInternalPort: 8001
 publicUrl: http://demo.localhost:8080
 applicationId: roku-bank-web
+# Extra environment (cloud: DEPLOYMENT=cloud).
+env: {}
 
 resources:
   requests:
@@ -24,5 +26,7 @@ ingress:
   enabled: true
   className: traefik
   host: demo.localhost
+  annotations: {}
+  originVerify: ""
 
 waitImage: busybox:1.36

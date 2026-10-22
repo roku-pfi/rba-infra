@@ -16,11 +16,11 @@ spec:
         {{- include "rba.selector" (dict "root" . "name" "audit-service") | nindent 8 }}
     spec:
       initContainers:
-        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
         {{- include "rba.wait" (dict "name" "rabbitmq" "host" "rabbitmq" "port" 5672 "image" .Values.images.wait) | nindent 8 }}
       containers:
         - name: audit-service
-          image: "{{ .Values.apps.auditService.image }}:{{ .Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" . "name" .Values.apps.auditService.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           env:
             - name: INIT_ON_STARTUP
@@ -56,10 +56,10 @@ spec:
         {{- include "rba.selector" (dict "root" . "name" "audit-api") | nindent 8 }}
     spec:
       initContainers:
-        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
       containers:
         - name: audit-api
-          image: "{{ .Values.apps.auditApi.image }}:{{ .Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" . "name" .Values.apps.auditApi.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           command: ["rba-audit-api"]
           ports:

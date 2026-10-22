@@ -1,0 +1,63 @@
+# Cloud overlay (ADR-0031, I-3): `helm upgrade --install rba helm/rba
+#   -f helm/rba/values-aws.yaml -f <session values>`. scripts/aws-up.sh writes
+# the session file (registry, tag, RDS/Valkey hosts, ALB security group,
+# CloudFront secret, trusted CIDRs) from the OpenTofu outputs.
+#
+# Hosts are the foundation's CloudFront names, fixed for the life of the
+# account: auth = IdP + console + Grafana (and the WebAuthn RP ID), bank, kaze.
+
+images:
+  pullPolicy: IfNotPresent
+
+credentials:
+  # Created by tofu/runtime (secrets.tf); the chart creates none.
+  existingSecret: rba-credentials
+
+init:
+  mode: job
+
+dataPlane:
+  postgres:
+    enabled: false   # RDS
+  redis:
+    enabled: false   # ElastiCache Valkey
+  rabbitmq:
+    persistence:
+      enabled: false
+
+observability:
+  prometheus:
+    persistence:
+      enabled: false
+  grafana:
+    adminPasswordKey: GRAFANA_ADMIN_PASSWORD
+
+ingress:
+  className: alb
+  host: d1fg623tjiucw7.cloudfront.net
+  publicUrl: https://d1fg623tjiucw7.cloudfront.net
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    # One ALB for every Ingress, this chart's and the bank's.
+    alb.ingress.kubernetes.io/group.name: rokusec
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"
+
+apps:
+  idp:
+    replicas: 2
+    seedRedirectUri: https://d3m6kfm1gma0g6.cloudfront.net/callback
+    webauthnRpId: d1fg623tjiucw7.cloudfront.net
+    webauthnOrigin: https://d1fg623tjiucw7.cloudfront.net
+    env:
+      DEPLOYMENT: cloud
+      PUBLIC_URL: https://d1fg623tjiucw7.cloudfront.net
+      SEED_KAZE_REDIRECT_URI: https://d14wc5kuicqxf6.cloudfront.net/callback
+      # CloudFront → ALB → pod: the viewer is in CloudFront's own header (C-2).
+      CLIENT_IP_HEADER: cloudfront-viewer-address
+      TRUST_CLIENT_REPORTED_IP: "false"
+      PRIVATE_IP_IS_HOME: "false"
+    secretEnv:
+      SEED_PASSWORD_SUFFIX: IDP_SEED_PASSWORD_SUFFIX
+      SIMULATION_SECRET: SIMULATION_SECRET

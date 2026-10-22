@@ -40,3 +40,63 @@ when the init Jobs do it before the replicas start (`init.mode: job`).
 {{- define "rba.initOnStartup" -}}
 {{- if eq .Values.init.mode "job" }}false{{ else }}true{{ end -}}
 {{- end }}
+
+{{/*
+Image reference: "<registry>/<name>:<tag>", or "<name>:<tag>" when no
+registry is set (k3d imports images by bare name).
+*/}}
+{{- define "rba.image" -}}
+{{- $r := .root.Values.images.registry -}}
+{{- if $r }}{{ $r }}/{{ end }}{{ .name }}:{{ .root.Values.images.tag }}
+{{- end }}
+
+{{/*
+ALB annotations for an Ingress (cloud). All of the chart's and the demo's
+Ingresses join one ALB (`group.name`), and each rule also requires the secret
+header CloudFront adds, so the ALB answers nothing that bypassed CloudFront.
+*/}}
+{{- define "rba.ingressAnnotations" -}}
+{{- with .root.Values.ingress.annotations }}
+{{ toYaml . }}
+{{- end }}
+{{- with .root.Values.ingress.originVerify }}
+alb.ingress.kubernetes.io/conditions.{{ $.service }}: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
+alb.ingress.kubernetes.io/healthcheck-path: {{ $.health | quote }}
+{{- end }}
+{{- end }}
+
+{{/*
+The IdP's environment. Shared by the Deployment and its init Job, so the Job
+seeds with the same redirect URIs and password suffix, and passes the same
+DEPLOYMENT=cloud validation.
+*/}}
+{{- define "rba.idpEnv" -}}
+- name: INIT_ON_STARTUP
+  value: "{{ include "rba.initOnStartup" . }}"
+- name: DATABASE_URL
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "rba.secretName" . }}
+      key: IDP_DATABASE_URL
+- name: PDP_BASE_URL
+  value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
+- name: AUDIT_BASE_URL
+  value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
+- name: SEED_BANK_REDIRECT_URI
+  value: {{ .Values.apps.idp.seedRedirectUri | quote }}
+- name: WEBAUTHN_RP_ID
+  value: {{ .Values.apps.idp.webauthnRpId | quote }}
+- name: WEBAUTHN_ORIGIN
+  value: {{ .Values.apps.idp.webauthnOrigin | quote }}
+{{- range $name, $value := .Values.apps.idp.env }}
+- name: {{ $name }}
+  value: {{ $value | quote }}
+{{- end }}
+{{- range $name, $key := .Values.apps.idp.secretEnv }}
+- name: {{ $name }}
+  valueFrom:
+    secretKeyRef:
+      name: {{ include "rba.secretName" $ }}
+      key: {{ $key }}
+{{- end }}
+{{- end }}

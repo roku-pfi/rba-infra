@@ -39,6 +39,10 @@ spec:
               value: {{ .Values.publicUrl | quote }}
             - name: APPLICATION_ID
               value: {{ .Values.applicationId | quote }}
+            {{- range $name, $value := .Values.env }}
+            - name: {{ $name }}
+              value: {{ $value | quote }}
+            {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
           startupProbe:

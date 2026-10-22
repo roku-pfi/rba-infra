@@ -9,3 +9,6 @@
 *.tfplan
 terraform.tfvars
 crash.log
+
+# scripts/aws-up.sh: generated per-session Helm values (contain secrets)
+.session/

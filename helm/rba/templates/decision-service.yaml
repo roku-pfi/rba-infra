@@ -18,11 +18,11 @@ spec:
         {{- include "rba.selector" (dict "root" . "name" "decision-service") | nindent 8 }}
     spec:
       initContainers:
-        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
-        {{- include "rba.wait" (dict "name" "redis" "host" "redis" "port" 6379 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "redis" "host" .Values.dataPlane.redis.host "port" 6379 "image" .Values.images.wait) | nindent 8 }}
       containers:
         - name: decision-service
-          image: "{{ .Values.apps.decisionService.image }}:{{ .Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" . "name" .Values.apps.decisionService.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           ports:
             - name: http

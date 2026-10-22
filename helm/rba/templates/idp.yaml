@@ -16,33 +16,17 @@ spec:
         {{- include "rba.selector" (dict "root" . "name" "idp") | nindent 8 }}
     spec:
       initContainers:
-        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
         {{- include "rba.wait" (dict "name" "pdp" "host" "decision-service" "port" .Values.apps.decisionService.port "image" .Values.images.wait) | nindent 8 }}
       containers:
         - name: idp
-          image: "{{ .Values.apps.idp.image }}:{{ .Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" . "name" .Values.apps.idp.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           ports:
             - name: http
               containerPort: {{ .Values.apps.idp.port }}
           env:
-            - name: INIT_ON_STARTUP
-              value: "{{ include "rba.initOnStartup" $ }}"
-            - name: DATABASE_URL
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "rba.secretName" $ }}
-                  key: IDP_DATABASE_URL
-            - name: PDP_BASE_URL
-              value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
-            - name: AUDIT_BASE_URL
-              value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
-            - name: SEED_BANK_REDIRECT_URI
-              value: {{ .Values.apps.idp.seedRedirectUri | quote }}
-            - name: WEBAUTHN_RP_ID
-              value: {{ .Values.apps.idp.webauthnRpId | quote }}
-            - name: WEBAUTHN_ORIGIN
-              value: {{ .Values.apps.idp.webauthnOrigin | quote }}
+            {{- include "rba.idpEnv" . | nindent 12 }}
           resources:
             {{- toYaml .Values.apps.idp.resources | nindent 12 }}
           startupProbe:
@@ -85,6 +69,10 @@ metadata:
   labels:
     {{- include "rba.labels" . | nindent 4 }}
     app.kubernetes.io/name: idp
+  {{- with include "rba.ingressAnnotations" (dict "root" . "service" "idp" "health" "/healthz") | trim }}
+  annotations:
+    {{- . | nindent 4 }}
+  {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

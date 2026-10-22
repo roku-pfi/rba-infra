@@ -11,6 +11,10 @@ output "trusted_proxy_cidrs" {
   value       = join(",", [for s in data.aws_subnet.public : s.cidr_block])
 }
 
+output "alb_security_group_id" {
+  value = aws_security_group.alb.id
+}
+
 output "rds_endpoint" {
   value = aws_db_instance.main.address
 }
@@ -23,6 +27,11 @@ output "seed_password_suffix" {
   description = "Seeded users sign in with <local part>-<this>."
   value       = random_password.seed_suffix.result
   sensitive   = true
+}
+
+output "grafana_admin_password" {
+  value     = random_password.grafana.result
+  sensitive = true
 }
 
 output "simulation_secret" {

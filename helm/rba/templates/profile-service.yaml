@@ -16,12 +16,12 @@ spec:
         {{- include "rba.selector" (dict "root" . "name" "profile-service") | nindent 8 }}
     spec:
       initContainers:
-        {{- include "rba.wait" (dict "name" "postgres" "host" "postgres" "port" 5432 "image" .Values.images.wait) | nindent 8 }}
-        {{- include "rba.wait" (dict "name" "redis" "host" "redis" "port" 6379 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "redis" "host" .Values.dataPlane.redis.host "port" 6379 "image" .Values.images.wait) | nindent 8 }}
         {{- include "rba.wait" (dict "name" "rabbitmq" "host" "rabbitmq" "port" 5672 "image" .Values.images.wait) | nindent 8 }}
       containers:
         - name: profile-service
-          image: "{{ .Values.apps.profileService.image }}:{{ .Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" . "name" .Values.apps.profileService.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           env:
             - name: INIT_ON_STARTUP

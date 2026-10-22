@@ -6,6 +6,17 @@ metadata:
   labels:
     app.kubernetes.io/name: demo-banking
     app.kubernetes.io/part-of: rba-demo
+  {{- if or .Values.ingress.annotations .Values.ingress.originVerify }}
+  annotations:
+    {{- with .Values.ingress.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.ingress.originVerify }}
+    # Only requests that came through CloudFront (secret header) are routed.
+    alb.ingress.kubernetes.io/conditions.demo-banking: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
+    alb.ingress.kubernetes.io/healthcheck-path: /healthz
+    {{- end }}
+  {{- end }}
 spec:
   {{- if .Values.ingress.className }}
   ingressClassName: {{ .Values.ingress.className }}

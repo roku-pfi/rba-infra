@@ -1,3 +1,4 @@
+{{- if .Values.dataPlane.postgres.enabled }}
 apiVersion: v1
 kind: ConfigMap
 metadata:
@@ -112,3 +113,4 @@ spec:
     - name: postgres
       port: 5432
       targetPort: postgres
+{{- end }}

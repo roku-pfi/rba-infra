@@ -58,6 +58,12 @@ for svc in "${SERVICES[@]}"; do
   args=(--builder "$BUILDER" --platform "$PLATFORMS" -f "$svc/Dockerfile")
   if [[ "$PUSH" -eq 1 ]]; then
     ref="$REGISTRY/$svc:$tag"
+    # ECR tags are immutable: an existing tag is the same build already.
+    if aws ecr describe-images --repository-name "$svc" --image-ids imageTag="$tag" \
+        --region "$REGION" >/dev/null 2>&1; then
+      echo "==> $ref already in ECR, skipping"
+      continue
+    fi
     echo "==> $ref ($PLATFORMS)"
     docker buildx build "${args[@]}" -t "$ref" --push .
   else

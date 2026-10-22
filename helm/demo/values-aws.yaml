@@ -1,0 +1,20 @@
+# Cloud overlay for the bank (I-3). scripts/aws-up.sh adds image, tag and the
+# CloudFront secret. Joins the rba chart's ALB through the same group.
+
+pullPolicy: IfNotPresent
+
+idpPublicUrl: https://d1fg623tjiucw7.cloudfront.net
+publicUrl: https://d3m6kfm1gma0g6.cloudfront.net
+
+env:
+  DEPLOYMENT: cloud
+
+ingress:
+  className: alb
+  host: d3m6kfm1gma0g6.cloudfront.net
+  annotations:
+    alb.ingress.kubernetes.io/scheme: internet-facing
+    alb.ingress.kubernetes.io/target-type: ip
+    alb.ingress.kubernetes.io/group.name: rokusec
+    alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
+    alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"

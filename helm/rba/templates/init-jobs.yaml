@@ -35,31 +35,25 @@ spec:
       restartPolicy: Never
       containers:
         - name: init
-          image: "{{ $job.image }}:{{ $.Values.images.tag }}"
+          image: {{ include "rba.image" (dict "root" $ "name" $job.image) | quote }}
           imagePullPolicy: {{ $.Values.images.pullPolicy }}
           command: ["python", "-m", "{{ $job.module }}"]
           env:
+            {{- if eq $job.name "idp" }}
+            {{- include "rba.idpEnv" $ | nindent 12 }}
+            {{- else }}
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "rba.secretName" $ }}
                   key: {{ $job.db }}
+            {{- end }}
             {{- if eq $job.name "profile-service" }}
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
                   name: {{ include "rba.secretName" $ }}
                   key: REDIS_URL
-            {{- end }}
-            {{- if eq $job.name "idp" }}
-            - name: SEED_BANK_REDIRECT_URI
-              value: {{ $.Values.apps.idp.seedRedirectUri | quote }}
-            - name: SEED_PASSWORD_SUFFIX
-              valueFrom:
-                secretKeyRef:
-                  name: {{ include "rba.secretName" $ }}
-                  key: IDP_SEED_PASSWORD_SUFFIX
-                  optional: true
             {{- end }}
 {{- end }}
 {{- end }}

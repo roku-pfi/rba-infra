@@ -70,6 +70,7 @@ data:
         static_configs:
           - targets: ["kube-state-metrics:8080"]
 ---
+{{- if .Values.observability.prometheus.persistence.enabled }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -82,6 +83,7 @@ spec:
   resources:
     requests:
       storage: {{ .Values.observability.prometheus.persistence.size }}
+{{- end }}
 ---
 apiVersion: apps/v1
 kind: Deployment
@@ -141,8 +143,12 @@ spec:
           configMap:
             name: prometheus
         - name: data
+          {{- if .Values.observability.prometheus.persistence.enabled }}
           persistentVolumeClaim:
             claimName: prometheus
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
 ---
 apiVersion: v1
 kind: Service

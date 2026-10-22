@@ -29,7 +29,21 @@ tofu output hosts                             # the three https://*.cloudfront.n
 CloudFront distributions take a few minutes to deploy. Until the runtime stack
 exists they point at a name that does not resolve and answer 502.
 
-## Each session (runtime)
+## Each session: `make aws-up` / `make aws-down`
+
+From `rba-infra/`, the whole environment is two commands:
+
+```bash
+make aws-up     # images → runtime stack → charts → CloudFront → smoke test (~25 min)
+make aws-down   # charts (deletes the ALB) → CloudFront back → destroy (~15 min)
+```
+
+`aws-up` prints the URLs and the first-session steps (break-glass activation
+code, seeded password suffix, Grafana password). Both scripts are idempotent:
+re-run after a failure. `make aws-plan` shows the runtime plan without
+creating anything.
+
+The same by hand:
 
 ```bash
 cd runtime
