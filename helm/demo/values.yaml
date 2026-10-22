@@ -10,7 +10,8 @@ idpPublicUrl: http://localhost:8080
 idpInternalHost: idp.rba.svc.cluster.local
 idpInternalPort: 8001
 publicUrl: http://demo.localhost:8080
-applicationId: roku-bank-web
+# Public client id at the IdP (rba_idp.client_ids.SEEDED), used in login URLs.
+clientId: rk_Bk7mQ2xVn9PwR4tL
 # Extra environment (cloud: DEPLOYMENT=cloud).
 env: {}
 

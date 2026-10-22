@@ -37,8 +37,8 @@ spec:
               value: "http://{{ .Values.idpInternalHost }}:{{ .Values.idpInternalPort }}"
             - name: PUBLIC_URL
               value: {{ .Values.publicUrl | quote }}
-            - name: APPLICATION_ID
-              value: {{ .Values.applicationId | quote }}
+            - name: CLIENT_ID
+              value: {{ .Values.clientId | quote }}
             {{- range $name, $value := .Values.env }}
             - name: {{ $name }}
               value: {{ $value | quote }}
