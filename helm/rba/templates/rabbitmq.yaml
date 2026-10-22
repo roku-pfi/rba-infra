@@ -44,12 +44,12 @@ spec:
             - name: RABBITMQ_DEFAULT_USER
               valueFrom:
                 secretKeyRef:
-                  name: rba-credentials
+                  name: {{ include "rba.secretName" $ }}
                   key: RABBITMQ_DEFAULT_USER
             - name: RABBITMQ_DEFAULT_PASS
               valueFrom:
                 secretKeyRef:
-                  name: rba-credentials
+                  name: {{ include "rba.secretName" $ }}
                   key: RABBITMQ_DEFAULT_PASS
           volumeMounts:
             - name: data

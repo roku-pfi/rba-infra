@@ -7,6 +7,16 @@ fullnameOverride: rba
 credentials:
   username: rba
   password: rba
+  # Name of a Secret created outside the chart (OpenTofu, in the cloud). When
+  # set, the chart creates none and every reference points at it.
+  existingSecret: ""
+
+# C-4. "startup": each service creates its schema and seed when it starts
+# (k3d — Postgres is part of this chart, so nothing can run before it).
+# "job": pre-install/pre-upgrade Jobs do it once, then replicas start without
+# racing (cloud — RDS and the Secret exist before Helm runs).
+init:
+  mode: startup
 
 images:
   tag: dev

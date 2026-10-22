@@ -1,0 +1,65 @@
+{{- /*
+C-4: schema + seed, once per install/upgrade, before any replica starts.
+Only in `init.mode: job`, which needs the database and the Secret to exist
+before Helm runs (cloud: RDS + a Secret from OpenTofu). Each command is
+idempotent, so a re-run upgrade changes nothing an operator edited.
+*/ -}}
+{{- if eq .Values.init.mode "job" }}
+{{- $jobs := list
+  (dict "name" "idp" "image" .Values.apps.idp.image "module" "rba_idp.init" "db" "IDP_DATABASE_URL")
+  (dict "name" "decision-service" "image" .Values.apps.decisionService.image "module" "rba_decision_service.init" "db" "DECISION_DATABASE_URL")
+  (dict "name" "audit" "image" .Values.apps.auditApi.image "module" "rba_audit_service.init" "db" "AUDIT_DATABASE_URL")
+  (dict "name" "profile-service" "image" .Values.apps.profileService.image "module" "rba_profile_service.init" "db" "PROFILE_DATABASE_URL")
+}}
+{{- range $job := $jobs }}
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: init-{{ $job.name }}
+  labels:
+    {{- include "rba.labels" $ | nindent 4 }}
+    app.kubernetes.io/component: init
+  annotations:
+    "helm.sh/hook": pre-install,pre-upgrade
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 3
+  ttlSecondsAfterFinished: 600
+  template:
+    metadata:
+      labels:
+        {{- include "rba.selector" (dict "root" $ "name" (printf "init-%s" $job.name)) | nindent 8 }}
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: init
+          image: "{{ $job.image }}:{{ $.Values.images.tag }}"
+          imagePullPolicy: {{ $.Values.images.pullPolicy }}
+          command: ["python", "-m", "{{ $job.module }}"]
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rba.secretName" $ }}
+                  key: {{ $job.db }}
+            {{- if eq $job.name "profile-service" }}
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rba.secretName" $ }}
+                  key: REDIS_URL
+            {{- end }}
+            {{- if eq $job.name "idp" }}
+            - name: SEED_BANK_REDIRECT_URI
+              value: {{ $.Values.apps.idp.seedRedirectUri | quote }}
+            - name: SEED_PASSWORD_SUFFIX
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rba.secretName" $ }}
+                  key: IDP_SEED_PASSWORD_SUFFIX
+                  optional: true
+            {{- end }}
+{{- end }}
+{{- end }}

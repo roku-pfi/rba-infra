@@ -11,7 +11,12 @@
      diego@rokubank.example / diego-demo   (Roku Bank)
      lucas@kazelabs.example / lucas-demo   (Kaze Labs)
      juan@rokusec.example   / juan-demo    (platform operator)
-   Mock OTP: 000000
+   Passkeys (ADR-0037): nobody has one on a fresh database, and Roku Bank and
+   the RokuSec console always ask for one. Issue an activation code, then
+   enroll at http://{{ .Values.ingress.host }}:8080/activate:
+     kubectl -n {{ .Release.Namespace }} exec deploy/idp -c idp -- \
+       python -m rba_idp.activation martin@correo.example --tenant roku-bank
+   Kaze Labs (password only) offers a passkey after a usual login instead.
    Bank (ns demo): http://demo.localhost:8080/
 
 2. PDP stays ClusterIP (IdP calls it on the cluster network):

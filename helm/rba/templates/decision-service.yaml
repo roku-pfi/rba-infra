@@ -28,15 +28,17 @@ spec:
             - name: http
               containerPort: {{ .Values.apps.decisionService.port }}
           env:
+            - name: INIT_ON_STARTUP
+              value: "{{ include "rba.initOnStartup" $ }}"
             - name: REDIS_URL
               valueFrom:
                 secretKeyRef:
-                  name: rba-credentials
+                  name: {{ include "rba.secretName" $ }}
                   key: REDIS_URL
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: rba-credentials
+                  name: {{ include "rba.secretName" $ }}
                   key: DECISION_DATABASE_URL
             - name: PROFILE_WRITE_MODE
               value: {{ .Values.apps.decisionService.profileWriteMode | quote }}

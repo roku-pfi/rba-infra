@@ -26,10 +26,12 @@ spec:
             - name: http
               containerPort: {{ .Values.apps.idp.port }}
           env:
+            - name: INIT_ON_STARTUP
+              value: "{{ include "rba.initOnStartup" $ }}"
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
-                  name: rba-credentials
+                  name: {{ include "rba.secretName" $ }}
                   key: IDP_DATABASE_URL
             - name: PDP_BASE_URL
               value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
