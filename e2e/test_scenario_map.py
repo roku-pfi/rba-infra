@@ -150,6 +150,9 @@ def test_sustained_stuffing_blocks_the_next_login(martin, console, presenter):
 
 def test_engine_down_falls_back_to_a_passkey_never_a_lockout(martin):
     """Diego scales the PDP to zero. Martín is asked for his passkey and gets in."""
+    # Back to the count it had (the HPA's minimum differs per environment): a
+    # lower count is raised by the HPA later, in the middle of the load scene.
+    replicas = kubectl("-n", "rba", "get", "deploy/decision-service", "-o", "jsonpath={.spec.replicas}")
     kubectl("-n", "rba", "scale", "deploy/decision-service", "--replicas=0")
     try:
         kubectl("-n", "rba", "wait", "--for=delete", "pod",
@@ -158,7 +161,7 @@ def test_engine_down_falls_back_to_a_passkey_never_a_lockout(martin):
         assert login.challenged
         assert login.landed.startswith(BANK)
     finally:
-        kubectl("-n", "rba", "scale", "deploy/decision-service", "--replicas=2")
+        kubectl("-n", "rba", "scale", "deploy/decision-service", f"--replicas={replicas}")
         kubectl("-n", "rba", "rollout", "status", "deploy/decision-service", "--timeout=180s")
 
 
