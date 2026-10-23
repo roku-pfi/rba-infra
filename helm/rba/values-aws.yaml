@@ -75,6 +75,9 @@ apps:
     hpa:
       minReplicas: 3
       maxReplicas: 5
+      # Of the 400m request: the presenter's load peaks at ~250-350m a pod,
+      # which 70% (280m) barely reached.
+      targetCPUUtilizationPercentage: 50
   profileService:
     # The TEST-NET home history never matches a real login: Martín's first
     # phone login scored CRITICAL against it. Real logins build the profile.
