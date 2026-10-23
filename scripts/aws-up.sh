@@ -82,7 +82,8 @@ YAML
 # the foundation stack), the simulation secret, the profile store for "reset"
 # and the PDP for "load".
 attacker_urls() {
-  fdj attacker_urls 2>/dev/null | python3 -c 'import json,sys
+  # Absent until the foundation apply below creates the Lambdas.
+  { fdj attacker_urls 2>/dev/null || echo '{}'; } | python3 -c 'import json,sys
 try: print(",".join(f"{k}={v}" for k, v in sorted(json.load(sys.stdin).items())))
 except ValueError: print("")'
 }

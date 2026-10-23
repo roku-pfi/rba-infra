@@ -13,7 +13,7 @@ metadata:
     {{- end }}
     {{- with .Values.ingress.originVerify }}
     # Only requests that came through CloudFront (secret header) are routed.
-    alb.ingress.kubernetes.io/conditions.{{ .Values.name }}: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
+    alb.ingress.kubernetes.io/conditions.{{ $.Values.name }}: '[{"field":"http-header","httpHeaderConfig":{"httpHeaderName":"X-Origin-Verify","values":["{{ . }}"]}}]'
     alb.ingress.kubernetes.io/healthcheck-path: /healthz
     {{- end }}
   {{- end }}
