@@ -122,6 +122,11 @@ step "helm: rba (init Jobs first, then the services)"
 helm upgrade --install rba "$INFRA_DIR/helm/rba" --kube-context "$CTX" \
   --namespace rba -f "$INFRA_DIR/helm/rba/values-aws.yaml" -f "$SESSION_DIR/rba.yaml" \
   --wait --timeout 15m
+if [[ -s "$SESSION_DIR/passkeys.json" ]]; then
+  step "restoring passkeys saved by aws-down"
+  kubectl --context "$CTX" -n rba exec -i deploy/idp -c idp -- python -m rba_idp.passkeys import \
+    < "$SESSION_DIR/passkeys.json"
+fi
 step "helm: demo (Roku Bank)"
 helm upgrade --install demo "$INFRA_DIR/helm/demo" --kube-context "$CTX" \
   --namespace demo --create-namespace -f "$INFRA_DIR/helm/demo/values-aws.yaml" -f "$SESSION_DIR/demo.yaml" \

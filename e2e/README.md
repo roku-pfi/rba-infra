@@ -56,3 +56,24 @@ sheet does.
   the profile queue are empty, so Martín is scored against a current profile.
 - After a stuffing attack it waits until the failures are in Martín's profile
   (read from inside the profile-service pod) instead of sleeping a fixed time.
+
+## Warm-up: a usual history without logging in by hand
+
+```bash
+make warm-up                          # Martín, 10 logins, k3d
+make warm-up WHO="martin diego" N=15
+make warm-up WHO=martin TARGET=aws    # after make aws-up
+```
+
+`e2e/warmup.py` logs personas in through the real hosted login with this
+machine's IP and browser: real decisions (Diego sees them), learned through the
+normal step-up confirmation (ADR-0042). Each persona's virtual passkey is kept
+in `.session/` (gitignored) per environment, so it enrolls once.
+
+## Passkeys across a cloud teardown
+
+The passkeys on people's devices are bound to the IdP's CloudFront host, which
+the permanent stack keeps. `make aws-down` saves the server's copy of every
+enrolled passkey (`.session/passkeys.json`: credential ids, user ids, public
+keys, counters) and `make aws-up` restores it after seeding the users, so phones
+and laptops enrolled once keep working (`python -m rba_idp.passkeys`).

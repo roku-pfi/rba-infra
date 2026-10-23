@@ -12,6 +12,8 @@ set -euo pipefail
 SCRIPT_DIR=$(cd "$(dirname "$0")" && pwd)
 INFRA_DIR=$(cd "$SCRIPT_DIR/.." && pwd)
 TOFU="$INFRA_DIR/tofu"
+SESSION_DIR="$INFRA_DIR/.session"   # gitignored
+mkdir -p "$SESSION_DIR"
 export AWS_PROFILE=${AWS_PROFILE:-rokusec}
 export AWS_REGION=${AWS_REGION:-us-east-1}
 
@@ -30,6 +32,17 @@ alb_names() {
 if aws eks describe-cluster --name rokusec >/dev/null 2>&1; then
   aws eks update-kubeconfig --name rokusec --region "$AWS_REGION" --alias rokusec >/dev/null
   CTX=$(kubectl config current-context)
+  step "saving enrolled passkeys (aws-up restores them)"
+  # The passkeys on people's devices are bound to the permanent CloudFront host;
+  # only the server's copy of the public keys goes with the database.
+  if kubectl --context "$CTX" -n rba exec deploy/idp -c idp -- python -m rba_idp.passkeys export \
+      > "$SESSION_DIR/passkeys.new.json" 2>/dev/null; then
+    python3 "$SCRIPT_DIR/merge-passkeys.py" "$SESSION_DIR/passkeys.json" "$SESSION_DIR/passkeys.new.json"
+    chmod 600 "$SESSION_DIR/passkeys.json"
+  else
+    echo "  could not export (IdP not running?); keeping the previous file"
+  fi
+  rm -f "$SESSION_DIR/passkeys.new.json"
   step "uninstalling the charts (the controller deletes the ALB)"
   helm --kube-context "$CTX" -n demo uninstall demo --wait 2>/dev/null || true
   helm --kube-context "$CTX" -n demo uninstall kaze --wait 2>/dev/null || true

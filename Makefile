@@ -29,5 +29,8 @@ k3d-up:
 k3d-down:
 	scripts/k3d-down.sh
 
+warm-up:  ## usual history through the real login: make warm-up WHO="martin diego" N=10 [TARGET=aws]
+	TARGET=$(or $(TARGET),k3d) scripts/warm-up.sh $(or $(WHO),martin) -n $(or $(N),10)
+
 e2e:
 	scripts/e2e.sh

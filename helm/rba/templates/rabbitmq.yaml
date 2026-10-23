@@ -33,6 +33,21 @@ spec:
     spec:
       securityContext:
         fsGroup: 999
+        # Re-applying the group on every mount made the Erlang cookie
+        # group-readable, and RabbitMQ refuses to start then (seen after a k3d
+        # stop/start). Only fix ownership when the volume root is wrong.
+        fsGroupChangePolicy: OnRootMismatch
+      initContainers:
+        # Repairs a cookie a previous mount already widened.
+        - name: cookie-permissions
+          image: {{ .Values.dataPlane.rabbitmq.image }}
+          imagePullPolicy: IfNotPresent
+          command: ["sh", "-c", "c=/var/lib/rabbitmq/.erlang.cookie; [ ! -f $c ] || { chown 999:999 $c && chmod 600 $c; }"]
+          securityContext:
+            runAsUser: 0
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/rabbitmq
       containers:
         - name: rabbitmq
           image: {{ .Values.dataPlane.rabbitmq.image }}
