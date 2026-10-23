@@ -28,7 +28,7 @@ alb_names() {
 }
 
 if aws eks describe-cluster --name rokusec >/dev/null 2>&1; then
-  aws eks update-kubeconfig --name rokusec --region "$AWS_REGION" >/dev/null
+  aws eks update-kubeconfig --name rokusec --region "$AWS_REGION" --alias rokusec >/dev/null
   CTX=$(kubectl config current-context)
   step "uninstalling the charts (the controller deletes the ALB)"
   helm --kube-context "$CTX" -n demo uninstall demo --wait 2>/dev/null || true

@@ -3,7 +3,7 @@ output "cluster_name" {
 }
 
 output "kubeconfig_command" {
-  value = "aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.region} --profile rokusec"
+  value = "aws eks update-kubeconfig --name ${module.eks.cluster_name} --region ${var.region} --profile rokusec --alias rokusec"
 }
 
 output "trusted_proxy_cidrs" {
