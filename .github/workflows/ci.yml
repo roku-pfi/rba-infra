@@ -1,0 +1,31 @@
+# rba-infra's own checks: the charts render and lint, the attacker Lambda's
+# tests pass. The e2e needs a running cluster and stays manual (make e2e).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-helm@v4
+      - name: Lint and render the charts
+        run: |
+          helm lint helm/rba
+          helm lint helm/demo
+          helm template rba helm/rba -f helm/rba/values-aws.yaml >/dev/null
+          helm template bank helm/demo -f helm/demo/values-aws.yaml >/dev/null
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Attacker Lambda tests
+        run: |
+          pip install pytest
+          python -m pytest -q attacker

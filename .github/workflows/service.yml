@@ -1,0 +1,105 @@
+# Reusable CI for the polyrepo (I-5): test → build → push.
+#
+# A service repo calls it with its sibling dependencies:
+#
+#   jobs:
+#     ci:
+#       uses: roku-pfi/rba-infra/.github/workflows/service.yml@main
+#       with:
+#         siblings: rba-contracts rba-features
+#
+# Every repo is checked out side by side under ./src, the way they live on a
+# laptop, because the Dockerfiles build from the polyrepo root and the tests
+# install the sibling libraries editable. On a push to main the image goes to
+# ECR tagged with the commit, through the OIDC role (tofu/foundation); pull
+# requests only test. Deploying stays `make aws-up` (the stack is per session).
+name: service
+
+on:
+  workflow_call:
+    inputs:
+      siblings:
+        description: Sibling repos this one installs or copies (space separated).
+        type: string
+        default: rba-contracts
+      image:
+        description: Build and push a container image (false for libraries).
+        type: boolean
+        default: true
+      python-version:
+        type: string
+        default: "3.12"
+
+permissions:
+  contents: read
+  id-token: write   # OIDC to AWS, push job only
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/${{ github.event.repository.name }}
+      - name: Check out siblings
+        env:
+          SIBLINGS: ${{ inputs.siblings }}
+        run: |
+          for repo in $SIBLINGS; do
+            git clone --depth 1 "https://github.com/${{ github.repository_owner }}/$repo.git" "src/$repo"
+          done
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ inputs.python-version }}
+          cache: pip
+          cache-dependency-path: src/${{ github.event.repository.name }}/pyproject.toml
+      - name: Install
+        working-directory: src/${{ github.event.repository.name }}
+        env:
+          SIBLINGS: ${{ inputs.siblings }}
+        run: |
+          python -m pip install -U pip
+          for repo in $SIBLINGS; do pip install -e "../$repo"; done
+          pip install -e ".[dev]"
+      - name: Test
+        working-directory: src/${{ github.event.repository.name }}
+        run: python -m pytest -q
+
+  image:
+    needs: test
+    if: inputs.image && github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/${{ github.event.repository.name }}
+      - name: Check out siblings and the build context's ignore file
+        env:
+          SIBLINGS: ${{ inputs.siblings }}
+        run: |
+          for repo in $SIBLINGS rba-infra; do
+            [ -d "src/$repo" ] || git clone --depth 1 "https://github.com/${{ github.repository_owner }}/$repo.git" "src/$repo"
+          done
+          cp src/rba-infra/docker/dockerignore src/.dockerignore
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ vars.AWS_CI_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION || 'us-east-1' }}
+      - id: ecr
+        uses: aws-actions/amazon-ecr-login@v2
+      - uses: docker/setup-qemu-action@v3
+      - uses: docker/setup-buildx-action@v3
+      - name: Build and push (arm64 for the Graviton nodes, amd64 for anyone else)
+        working-directory: src
+        env:
+          REF: ${{ steps.ecr.outputs.registry }}/${{ github.event.repository.name }}
+        run: |
+          tag=$(git -C "${{ github.event.repository.name }}" rev-parse --short=12 HEAD)
+          # ECR tags are immutable: a tag already there is this same build.
+          if aws ecr describe-images --repository-name "${{ github.event.repository.name }}" \
+              --image-ids imageTag="$tag" >/dev/null 2>&1; then
+            echo "$REF:$tag already in ECR"; exit 0
+          fi
+          docker buildx build --platform linux/arm64,linux/amd64 \
+            -f "${{ github.event.repository.name }}/Dockerfile" -t "$REF:$tag" --push .
+          echo "pushed $REF:$tag" >> "$GITHUB_STEP_SUMMARY"
