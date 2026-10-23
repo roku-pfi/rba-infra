@@ -261,7 +261,9 @@ def test_load_scales_the_pdp(presenter):
           f"({snap['p95_ms']} ms at the presenter), replicas {before} → {peak}")
     # A request can time out while a new replica starts; a handful is not a failure.
     assert snap["sent"] > 0 and snap["errors"] / snap["sent"] < 0.005
-    assert peak > before
+    # Above the HPA's floor: a run right after another starts already scaled.
+    floor = int(kubectl("-n", "rba", "get", "hpa/decision-service", "-o", "jsonpath={.spec.minReplicas}"))
+    assert peak > floor, f"replicas {before} → {peak}, HPA minimum {floor}"
     if os.environ.get("E2E_P95_MS"):
         assert pdp_p95 <= int(os.environ["E2E_P95_MS"])
     # Leave the platform as the next scene expects it: profiles current.
