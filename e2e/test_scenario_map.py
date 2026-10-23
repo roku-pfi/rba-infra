@@ -82,17 +82,37 @@ def test_impossible_travel_is_challenged_and_marked_simulated(martin, console, p
     assert "impossible_travel" in codes(d), why(d)
 
 
+def _last_decision(console) -> dict:
+    return console.get("/decisions", params={"user_id": MARTIN, "limit": 1}).json()["items"][0]
+
+
 def test_login_from_tokyo_stops_at_the_passkey(console, presenter):
-    """An attacker with Martín's real password, from a hosting network in Japan."""
+    """An attacker with Martín's real password, from a hosting network in Japan.
+
+    The score itself must see it, not only the hosting-network rule: that rule
+    always fires for this scene, and once hid a model that scored every login
+    LOW (finding 2026-10-23).
+    """
     [tokyo] = presenter.post("/attack/tokyo")["regions"]
     [attempt] = tokyo["attempts"]
     assert attempt["outcome"] in ("MFA_REQUIRED", "REAUTH_REQUIRED"), tokyo
 
-    decisions = console.get("/decisions", params={"user_id": MARTIN, "limit": 1}).json()
-    d = decisions["items"][0]
-    assert d["enforced_action"] in ("REQUIRE_MFA", "REAUTHENTICATE")
+    d = _last_decision(console)
+    assert d["enforced_action"] in ("REQUIRE_MFA", "REAUTHENTICATE"), why(d)
     assert d["login"]["country"] == "JP"
-    assert "vpn_or_hosting" in codes(d) or d["risk_level"] in ("HIGH", "CRITICAL")
+    assert d["risk_level"] in ("HIGH", "CRITICAL"), why(d)
+
+
+def test_an_abandoned_step_up_teaches_the_profile_nothing(console, presenter):
+    """The attacker never passed the passkey, so Japan is still new for Martín
+    on the second attempt (ADR-0042)."""
+    presenter.post("/attack/tokyo")
+    wait_for_profiles_to_catch_up()
+    presenter.post("/attack/tokyo")
+    d = _last_decision(console)
+    assert d["features"]["country_seen_before"] == 0, why(d)
+    assert d["features"]["asn_seen_before"] == 0, why(d)
+    assert d["risk_level"] in ("HIGH", "CRITICAL"), why(d)
 
 
 def test_stuffing_burst_makes_the_next_login_reauthenticate(martin, console, presenter):
