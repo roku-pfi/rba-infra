@@ -8,6 +8,12 @@ variable "vpc_cidr" {
   default = "10.40.0.0/16"
 }
 
+variable "github_org_id" {
+  description = "Numeric id of the GitHub organisation (in immutable OIDC subjects)."
+  type        = string
+  default     = "314758296"
+}
+
 variable "github_org" {
   description = "GitHub organisation whose repos may push images through OIDC."
   type        = string

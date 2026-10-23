@@ -22,7 +22,12 @@ data "aws_iam_policy_document" "github_trust" {
     condition {
       test     = "StringLike"
       variable = "token.actions.githubusercontent.com:sub"
-      values   = ["repo:${var.github_org}/*:ref:refs/heads/main"]
+      # GitHub's immutable subjects carry the owner's numeric id too
+      # (repo:<org>@<id>/<repo>@<id>:ref:...); accept both forms.
+      values = [
+        "repo:${var.github_org}/*:ref:refs/heads/main",
+        "repo:${var.github_org}@${var.github_org_id}/*:ref:refs/heads/main",
+      ]
     }
   }
 }
