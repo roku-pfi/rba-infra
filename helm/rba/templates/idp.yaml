@@ -25,8 +25,13 @@ spec:
           ports:
             - name: http
               containerPort: {{ .Values.apps.idp.port }}
+            # Prometheus only, never in the Ingress (RF-20).
+            - name: metrics
+              containerPort: 9100
           env:
             {{- include "rba.idpEnv" . | nindent 12 }}
+            - name: METRICS_PORT
+              value: "9100"
           resources:
             {{- toYaml .Values.apps.idp.resources | nindent 12 }}
           startupProbe:
@@ -57,6 +62,9 @@ spec:
   selector:
     {{- include "rba.selector" (dict "root" . "name" "idp") | nindent 4 }}
   ports:
+    - name: metrics
+      port: 9100
+      targetPort: metrics
     - name: http
       port: {{ .Values.apps.idp.port }}
       targetPort: http
