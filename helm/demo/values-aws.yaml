@@ -18,3 +18,14 @@ ingress:
     alb.ingress.kubernetes.io/group.name: rokusec
     alb.ingress.kubernetes.io/listen-ports: '[{"HTTP": 80}]'
     alb.ingress.kubernetes.io/manage-backend-security-group-rules: "true"
+
+# The presenter's load (32 clients) runs in the bank's pod: at 250m it was the
+# bottleneck (~50 req/s, 1.8 s p95 on its side, 99 ms at the PDP), too little
+# to make the PDP scale.
+resources:
+  requests:
+    cpu: 100m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 256Mi
