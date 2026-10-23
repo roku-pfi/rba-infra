@@ -159,29 +159,7 @@ class Persona:
     def login(self, start_url: str, *, complete_challenge: bool = True) -> Login:
         """Open an app (or a login URL) and sign in, the way a person would."""
         p = self.page
-        self.forget_sessions()
-        p.goto(start_url)
-        p.wait_for_selector("#form-login", state="visible", timeout=15_000)
-        p.fill("#email", self.email)
-        p.fill("#password", self.password)
-        # Read the answer on its way to the page: on ALLOW the page navigates at
-        # once, and a remote host loses that race for the browser's own copy.
-        answer: dict = {}
-
-        def grab(route) -> None:
-            if route.request.method != "POST":
-                route.continue_()
-                return
-            resp = route.fetch()
-            answer.update(_json(resp))
-            route.fulfill(response=resp)
-
-        p.route(LOGIN_POST, grab)
-        try:
-            with p.expect_response(lambda r: r.request.method == "POST" and LOGIN_POST.match(r.url)):
-                p.click("#login-submit")
-        finally:
-            p.unroute(LOGIN_POST, grab)
+        answer = self._submit(start_url, self.password)
         outcome, event_id = answer.get("outcome"), answer.get("event_id")
         panel = self._settle()
         challenged = panel == "challenge"
@@ -200,6 +178,40 @@ class Persona:
             if panel == "challenge":
                 raise AssertionError(f"passkey step failed: {error}")
         return Login(outcome, challenged, panel, p.url, event_id)
+
+    def wrong_password(self, start_url: str) -> str | None:
+        """One attempt with a wrong password; the IdP's answer (INVALID_CREDENTIALS)."""
+        answer = self._submit(start_url, f"{self.password}-typo")
+        self.page.wait_for_selector("#login-error:not([hidden])", timeout=10_000)
+        return answer.get("outcome")
+
+    def _submit(self, start_url: str, password: str) -> dict:
+        """Fill the hosted login and send it; the IdP's JSON answer."""
+        p = self.page
+        self.forget_sessions()
+        p.goto(start_url)
+        p.wait_for_selector("#form-login", state="visible", timeout=15_000)
+        p.fill("#email", self.email)
+        p.fill("#password", password)
+        # Read the answer on its way to the page: on ALLOW the page navigates at
+        # once, and a remote host loses that race for the browser's own copy.
+        answer: dict = {}
+
+        def grab(route) -> None:
+            if route.request.method != "POST":
+                route.continue_()
+                return
+            resp = route.fetch()
+            answer.update(_json(resp))
+            route.fulfill(response=resp)
+
+        p.route(LOGIN_POST, grab)
+        try:
+            with p.expect_response(lambda r: r.request.method == "POST" and LOGIN_POST.match(r.url)):
+                p.click("#login-submit")
+        finally:
+            p.unroute(LOGIN_POST, grab)
+        return answer
 
     def _settle(self) -> str | None:
         """Wait until the login leaves the IdP, or stops on a panel."""

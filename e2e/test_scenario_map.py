@@ -149,18 +149,38 @@ def test_stuffing_burst_makes_the_next_login_reauthenticate(martin, console, pre
     assert "failed_login_burst" in codes(d), why(d)
 
 
-def test_sustained_stuffing_blocks_the_next_login(martin, console, presenter):
-    """Twelve wrong passwords: past the lockout band, no challenge is offered."""
+def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, presenter):
+    """Ten wrong passwords from each region's IP, then the real one: each IP is
+    blocked, the real password included. Martín is not locked out: his next
+    login asks for the passkey (ADR-0045)."""
     presenter.post("/reset", mode="failures")
     regions = presenter.post("/attack/stuffing", level="lockout")["regions"]
-    assert sum(len(r["attempts"]) for r in regions) == 12
-    wait_for_failures(MARTIN, 12)
+    for region in regions:
+        *wrong, right = region["attempts"]
+        assert len(wrong) == 10 and all(a["outcome"] == "INVALID_CREDENTIALS" for a in wrong), region
+        assert right["outcome"] == "BLOCKED", region
+
+    login = martin.login(f"{BANK}/")
+    d = console.decision(login.event_id)
+    assert login.challenged and login.landed.startswith(BANK), why(d)
+    assert d["enforced_action"] == "REAUTHENTICATE", why(d)
+    assert "failed_login_burst" in codes(d) and "source_blocked" not in codes(d), why(d)
+
+    presenter.post("/reset", mode="failures")
+
+
+def test_martins_own_wrong_passwords_pause_his_account(martin, console, presenter):
+    """Five wrong passwords from his own laptop, then the right one: paused for a
+    while (ADR-0045). The cooldown, not the attacker, is what can block him."""
+    presenter.post("/reset", mode="failures")
+    for _ in range(5):
+        assert martin.wrong_password(f"{BANK}/") == "INVALID_CREDENTIALS"
 
     login = martin.login(f"{BANK}/")
     d = console.decision(login.event_id)
     assert login.panel == "blocked" and not login.challenged, why(d)
     assert d["enforced_action"] == "BLOCK", why(d)
-    assert "failed_login_lockout" in codes(d), why(d)
+    assert "account_cooldown" in codes(d), why(d)
 
     presenter.post("/reset", mode="failures")
 
