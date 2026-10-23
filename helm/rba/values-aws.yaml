@@ -61,6 +61,20 @@ apps:
     secretEnv:
       SEED_PASSWORD_SUFFIX: IDP_SEED_PASSWORD_SUFFIX
       SIMULATION_SECRET: SIMULATION_SECRET
+  decisionService:
+    # RNF-07 (p95 < 200 ms) under the presenter's load: the laptop's 50m
+    # request scaled late and 500m throttled each pod. 3 × 400m at rest, up
+    # to 5 (2 t4g.medium nodes hold that with the rest of the stack).
+    resources:
+      requests:
+        cpu: 400m
+        memory: 128Mi
+      limits:
+        cpu: "1"
+        memory: 256Mi
+    hpa:
+      minReplicas: 3
+      maxReplicas: 5
   profileService:
     # The TEST-NET home history never matches a real login: Martín's first
     # phone login scored CRITICAL against it. Real logins build the profile.

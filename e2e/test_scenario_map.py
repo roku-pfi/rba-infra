@@ -7,8 +7,10 @@ scene to the next), so run the file as a whole and in order.
 
 from __future__ import annotations
 
+import json
 import os
 import time
+from urllib.parse import quote
 
 import pytest
 
@@ -198,17 +200,34 @@ def test_tenants_are_isolated(console):
     assert other.status_code in (403, 404)
 
 
+def pdp_p95_ms(seconds: int) -> float:
+    """p95 of /risk/evaluate over the last ``seconds``, from Prometheus."""
+    query = (
+        "histogram_quantile(0.95, sum by (le) (increase("
+        f'http_request_duration_seconds_bucket{{handler="/risk/evaluate"}}[{seconds}s])))'
+    )
+    out = kubectl(
+        "-n", "rba", "exec", "deploy/prometheus", "--",
+        "wget", "-qO-", f"http://localhost:9090/api/v1/query?query={quote(query)}",
+    )
+    [result] = json.loads(out)["data"]["result"]
+    return float(result["value"][1]) * 1000
+
+
 @pytest.mark.skipif(os.environ.get("E2E_LOAD") != "1", reason="slow; set E2E_LOAD=1")
 def test_load_scales_the_pdp(presenter):
     """The presenter's load: no errors, and the PDP adds replicas.
 
     E2E_P95_MS sets the latency bound (RNF-07: 200 ms in the cloud); unset, the
     p95 is reported but not judged, since a laptop cluster says little about it.
+    The bound is judged on the PDP's own histogram: the presenter's figure also
+    counts its queueing behind 32 workers on a small pod.
     """
     def replicas() -> int:
         return int(kubectl("-n", "rba", "get", "deploy/decision-service", "-o", "jsonpath={.status.replicas}"))
 
     before = replicas()
+    started = time.monotonic()
     assert presenter.post("/load")["started"]
     peak = before
     while True:
@@ -217,12 +236,13 @@ def test_load_scales_the_pdp(presenter):
         snap = presenter.get("/load")
         if not snap["running"]:
             break
-    print(f"load: {snap['sent']} requests, {snap['errors']} errors, p95 {snap['p95_ms']} ms, "
-          f"replicas {before} → {peak}")
+    pdp_p95 = pdp_p95_ms(seconds=int(time.monotonic() - started) + 30)
+    print(f"load: {snap['sent']} requests, {snap['errors']} errors, p95 {pdp_p95:.0f} ms at the PDP "
+          f"({snap['p95_ms']} ms at the presenter), replicas {before} → {peak}")
     # A request can time out while a new replica starts; a handful is not a failure.
     assert snap["sent"] > 0 and snap["errors"] / snap["sent"] < 0.005
     assert peak > before
     if os.environ.get("E2E_P95_MS"):
-        assert snap["p95_ms"] < int(os.environ["E2E_P95_MS"])
+        assert pdp_p95 <= int(os.environ["E2E_P95_MS"])
     # Leave the platform as the next scene expects it: profiles current.
     wait_for_profiles_to_catch_up()
