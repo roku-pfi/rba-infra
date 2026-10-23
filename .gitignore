@@ -18,3 +18,4 @@ crash.log
 
 # e2e: local virtualenv
 e2e/.venv/
+__pycache__/

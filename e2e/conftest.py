@@ -20,6 +20,7 @@ Configuration (environment, defaults = k3d):
 from __future__ import annotations
 
 import os
+import re
 import subprocess
 import time
 from dataclasses import dataclass, field
@@ -163,10 +164,25 @@ class Persona:
         p.wait_for_selector("#form-login", state="visible", timeout=15_000)
         p.fill("#email", self.email)
         p.fill("#password", self.password)
-        with p.expect_response(lambda r: r.request.method == "POST" and r.url.split("?")[0].endswith("login")) as info:
-            p.click("#login-submit")
-        body = _json(info.value)
-        outcome, event_id = body.get("outcome"), body.get("event_id")
+        # Read the answer on its way to the page: on ALLOW the page navigates at
+        # once, and a remote host loses that race for the browser's own copy.
+        answer: dict = {}
+
+        def grab(route) -> None:
+            if route.request.method != "POST":
+                route.continue_()
+                return
+            resp = route.fetch()
+            answer.update(_json(resp))
+            route.fulfill(response=resp)
+
+        p.route(LOGIN_POST, grab)
+        try:
+            with p.expect_response(lambda r: r.request.method == "POST" and LOGIN_POST.match(r.url)):
+                p.click("#login-submit")
+        finally:
+            p.unroute(LOGIN_POST, grab)
+        outcome, event_id = answer.get("outcome"), answer.get("event_id")
         panel = self._settle()
         challenged = panel == "challenge"
         if challenged and complete_challenge:
@@ -211,6 +227,9 @@ class Persona:
 
     def idp_token(self) -> str:
         return self.page.evaluate(f"sessionStorage.getItem('{SESSION_KEY}')")
+
+
+LOGIN_POST = re.compile(r"[^?]*login(\?.*)?$")
 
 
 def _json(response) -> dict:
