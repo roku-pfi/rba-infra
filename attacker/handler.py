@@ -29,9 +29,11 @@ import urllib.request
 
 MAX_ATTEMPTS = 20
 TIMEOUT_SECONDS = 8
-# What a stuffing kit claims to be. The IdP records it like any browser's.
+# What a stuffing kit claims to be: the most common desktop browser, as real
+# kits do and as Wiefling et al.'s VPN attacker does (ADR-0043). The IdP
+# records it like any browser's.
 USER_AGENT = (
-    "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/129.0 Safari/537.36"
 )
 
@@ -74,7 +76,7 @@ def attempt(idp_url: str, *, client_id: str, email: str, password: str) -> dict:
         # Required by the contract, replaced by the IdP in the cloud (ADR-0032).
         "ip_address": "0.0.0.0",
         "device_type": "desktop",
-        "os": "Linux",
+        "os": "Windows",
         "browser": "Chrome",
         "user_agent": USER_AGENT,
     }
