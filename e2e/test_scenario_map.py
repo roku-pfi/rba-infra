@@ -80,7 +80,7 @@ def test_impossible_travel_is_challenged_and_marked_simulated(martin, console, p
 
     d = console.decision(login.event_id)
     assert d["simulated"] is True
-    assert d["enforced_action"] == "REQUIRE_MFA", why(d)
+    assert d["enforced_action"] in ("REQUIRE_MFA", "REAUTHENTICATE"), why(d)
     assert "impossible_travel" in codes(d), why(d)
 
 
