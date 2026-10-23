@@ -79,7 +79,7 @@ def failed_logins(user_id: str) -> int:
 
 
 def wait_for_failures(user_id: str, at_least: int, timeout: float = 120) -> int:
-    """Failures travel outbox → queue → profile-service; under a backlog (after
+    """Failures travel journal → queue → profile-service; under a backlog (after
     the load scene) that takes a while. Wait for them instead of guessing."""
     deadline = time.monotonic() + timeout
     while (n := failed_logins(user_id)) < at_least:
@@ -89,29 +89,29 @@ def wait_for_failures(user_id: str, at_least: int, timeout: float = 120) -> int:
     return n
 
 
-_OUTBOX_BACKLOG = (
-    "import os, sqlalchemy as sa; "
-    "e = sa.create_engine(os.environ['DATABASE_URL']); "
-    "print(e.connect().execute(sa.text('select count(*) from outbox where published_at is null')).scalar())"
+# Relayed entries are deleted from the stream, so its length is the backlog.
+_JOURNAL_BACKLOG = (
+    "import os, redis; "
+    "print(redis.Redis.from_url(os.environ['REDIS_URL']).xlen('rba:events'))"
 )
 
 
 def wait_for_profiles_to_catch_up(timeout: float = 600) -> None:
-    """Every decision event relayed (PDP outbox → event-publisher) and consumed
+    """Every decision event relayed (journal → event-publisher) and consumed
     (queue → profile-service). Until then the PDP scores against a stale
-    profile; after the load scene the outbox is where the backlog builds."""
+    profile; after the load scene the journal is where the backlog builds."""
     deadline = time.monotonic() + timeout
     while True:
-        outbox = int(kubectl("-n", "rba", "exec", "deploy/event-publisher", "--",
-                             "python", "-c", _OUTBOX_BACKLOG).strip())
+        journal = int(kubectl("-n", "rba", "exec", "deploy/event-publisher", "--",
+                              "python", "-c", _JOURNAL_BACKLOG).strip())
         out = kubectl("-n", "rba", "exec", "deploy/rabbitmq", "--",
                       "rabbitmqctl", "-q", "list_queues", "name", "messages", timeout=120)
         queued = sum(int(n) for name, n in (l.split() for l in out.splitlines() if l.strip())
                      if name.startswith("rba.profile."))
-        if outbox == 0 and queued == 0:
+        if journal == 0 and queued == 0:
             return
         if time.monotonic() > deadline:
-            raise AssertionError(f"profiles behind: {outbox} unpublished, {queued} queued")
+            raise AssertionError(f"profiles behind: {journal} unrelayed, {queued} queued")
         time.sleep(3)
 
 

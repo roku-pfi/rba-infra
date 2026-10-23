@@ -58,7 +58,7 @@ dataPlane:
     image: rabbitmq:3.13-management-alpine
     persistence:
       # Off in the cloud: emptyDir, no EBS driver needed (ADR-0031 accepts
-      # losing queued events with the pod; the outbox keeps the record).
+      # losing queued events with the pod; the decisions read model keeps the record).
       enabled: true
       size: 1Gi
     resources:

@@ -52,8 +52,8 @@ sheet does.
 
 - After a policy change the suite waits 6 s: each PDP replica caches the policy
   for 5 s.
-- Before the first scene and after the load, it waits until the PDP's outbox and
-  the profile queue are empty, so Martín is scored against a current profile.
+- Before the first scene and after the load, it waits until the decision journal
+  (Valkey stream) and the profile queue are empty, so Martín is scored against a current profile.
 - After a stuffing attack it waits until the failures are in Martín's profile
   (read from inside the profile-service pod) instead of sleeping a fixed time.
 

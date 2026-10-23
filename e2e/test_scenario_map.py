@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import os
 import time
+from datetime import datetime, timedelta, timezone
 from urllib.parse import quote
 
 import pytest
@@ -84,8 +85,22 @@ def test_impossible_travel_is_challenged_and_marked_simulated(martin, console, p
     assert "impossible_travel" in codes(d), why(d)
 
 
-def _last_decision(console) -> dict:
-    return console.get("/decisions", params={"user_id": MARTIN, "limit": 1}).json()["items"][0]
+def _last_decision(console, since: datetime) -> dict:
+    """Martín's newest decision after ``since``: the list is the read model,
+    which the event-publisher fills a moment after the login (ADR-0044)."""
+    deadline = time.monotonic() + 15
+    while True:
+        items = console.get("/decisions", params={"user_id": MARTIN, "limit": 1}).json()["items"]
+        if items and datetime.fromisoformat(items[0]["occurred_at"]) >= since:
+            return items[0]
+        if time.monotonic() > deadline:
+            raise AssertionError(f"no decision for Martín after {since}")
+        time.sleep(0.5)
+
+
+def _now() -> datetime:
+    # A little early: the laptop's clock and the cluster's are not the same.
+    return datetime.now(timezone.utc) - timedelta(seconds=2)
 
 
 def test_login_from_tokyo_stops_at_the_passkey(console, presenter):
@@ -95,11 +110,12 @@ def test_login_from_tokyo_stops_at_the_passkey(console, presenter):
     always fires for this scene, and once hid a model that scored every login
     LOW (finding 2026-10-23).
     """
+    since = _now()
     [tokyo] = presenter.post("/attack/tokyo")["regions"]
     [attempt] = tokyo["attempts"]
     assert attempt["outcome"] in ("MFA_REQUIRED", "REAUTH_REQUIRED"), tokyo
 
-    d = _last_decision(console)
+    d = _last_decision(console, since)
     assert d["enforced_action"] in ("REQUIRE_MFA", "REAUTHENTICATE"), why(d)
     assert d["login"]["country"] == "JP"
     assert d["risk_level"] in ("HIGH", "CRITICAL"), why(d)
@@ -110,8 +126,9 @@ def test_an_abandoned_step_up_teaches_the_profile_nothing(console, presenter):
     on the second attempt (ADR-0042)."""
     presenter.post("/attack/tokyo")
     wait_for_profiles_to_catch_up()
+    since = _now()
     presenter.post("/attack/tokyo")
-    d = _last_decision(console)
+    d = _last_decision(console, since)
     assert d["features"]["country_seen_before"] == 0, why(d)
     assert d["features"]["asn_seen_before"] == 0, why(d)
     assert d["risk_level"] in ("HIGH", "CRITICAL"), why(d)

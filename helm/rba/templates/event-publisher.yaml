@@ -17,6 +17,7 @@ spec:
     spec:
       initContainers:
         {{- include "rba.wait" (dict "name" "postgres" "host" .Values.dataPlane.postgres.host "port" 5432 "image" .Values.images.wait) | nindent 8 }}
+        {{- include "rba.wait" (dict "name" "redis" "host" .Values.dataPlane.redis.host "port" 6379 "image" .Values.images.wait) | nindent 8 }}
         {{- include "rba.wait" (dict "name" "rabbitmq" "host" "rabbitmq" "port" 5672 "image" .Values.images.wait) | nindent 8 }}
         {{- include "rba.wait" (dict "name" "pdp" "host" "decision-service" "port" .Values.apps.decisionService.port "image" .Values.images.wait) | nindent 8 }}
       containers:
@@ -24,6 +25,12 @@ spec:
           image: {{ include "rba.image" (dict "root" . "name" .Values.apps.eventPublisher.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
           env:
+            # The decision journal's stream (ADR-0044).
+            - name: REDIS_URL
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "rba.secretName" $ }}
+                  key: REDIS_URL
             - name: DATABASE_URL
               valueFrom:
                 secretKeyRef:
