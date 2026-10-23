@@ -32,6 +32,7 @@ if aws eks describe-cluster --name rokusec >/dev/null 2>&1; then
   CTX=$(kubectl config current-context)
   step "uninstalling the charts (the controller deletes the ALB)"
   helm --kube-context "$CTX" -n demo uninstall demo --wait 2>/dev/null || true
+  helm --kube-context "$CTX" -n demo uninstall kaze --wait 2>/dev/null || true
   helm --kube-context "$CTX" -n rba uninstall rba --wait 2>/dev/null || true
   for _ in $(seq 36); do
     if [[ -z "$(alb_names)" ]]; then break; fi
