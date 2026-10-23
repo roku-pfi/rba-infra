@@ -47,6 +47,8 @@ data:
     global:
       scrape_interval: 15s
       evaluation_interval: 15s
+    rule_files:
+      - /etc/prometheus/alerts.yml
     scrape_configs:
       - job_name: prometheus
         static_configs:
@@ -83,6 +85,61 @@ data:
       - job_name: kube-state-metrics
         static_configs:
           - targets: ["kube-state-metrics:8080"]
+  # Alarms on risk and on the platform (RF-16). They show as firing in Grafana
+  # and in Prometheus; the console reads them per tenant. Thresholds are for a
+  # demo-sized deployment.
+  alerts.yml: |
+    groups:
+      - name: risk
+        rules:
+          - alert: CredentialStuffing
+            expr: sum by (tenant) (increase(rba_failed_logins_total[5m])) > 20
+            labels: { severity: warning }
+            annotations:
+              summary: "Más de 20 contraseñas incorrectas en 5 min"
+          - alert: SourceBlocked
+            expr: sum by (tenant) (increase(rba_rule_hits_total{code="source_blocked"}[10m])) > 0
+            labels: { severity: warning }
+            annotations:
+              summary: "Una IP quedó bloqueada por intentos fallidos"
+          - alert: AccountUnderAttack
+            expr: sum by (tenant) (increase(rba_rule_hits_total{code="failed_login_burst"}[10m])) > 0
+            labels: { severity: info }
+            annotations:
+              summary: "Contraseñas incorrectas contra una cuenta desde lugares que no usa"
+          - alert: HighBlockRate
+            expr: |
+              sum by (tenant) (rate(rba_decisions_total{enforced_action="BLOCK"}[10m]))
+                / sum by (tenant) (rate(rba_decisions_total[10m])) > 0.2
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "Más del 20% de los inicios bloqueados"
+      - name: platform
+        rules:
+          - alert: EngineFallback
+            expr: sum by (tenant) (increase(rba_decisions_total{fallback="true"}[5m])) > 0
+            labels: { severity: critical }
+            annotations:
+              summary: "El motor decidió sin modelo o sin perfil (respaldo)"
+          - alert: EngineUnavailable
+            expr: sum(increase(rba_idp_pdp_unavailable_total[5m])) > 0
+            labels: { severity: critical }
+            annotations:
+              summary: "El IdP no pudo consultar al motor: pide passkey a todos"
+          - alert: DecisionLatencyHigh
+            expr: |
+              histogram_quantile(0.95, sum by (le) (rate(http_request_duration_seconds_bucket{handler="/risk/evaluate"}[5m]))) > 0.2
+            for: 5m
+            labels: { severity: warning }
+            annotations:
+              summary: "p95 de decisión por encima de 200 ms (RNF-07)"
+          - alert: EventRelayDown
+            expr: kube_deployment_status_replicas_available{deployment="event-publisher"} == 0
+            for: 2m
+            labels: { severity: critical }
+            annotations:
+              summary: "El relay de eventos está caído: los perfiles no aprenden"
 ---
 {{- if .Values.observability.prometheus.persistence.enabled }}
 apiVersion: v1

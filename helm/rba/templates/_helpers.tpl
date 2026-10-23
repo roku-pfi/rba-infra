@@ -80,6 +80,11 @@ DEPLOYMENT=cloud validation.
       key: IDP_DATABASE_URL
 - name: PDP_BASE_URL
   value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
+{{- if .Values.observability.enabled }}
+# The console's alarms (RF-16).
+- name: PROMETHEUS_URL
+  value: "http://prometheus:9090"
+{{- end }}
 - name: AUDIT_BASE_URL
   value: "http://decision-service:{{ .Values.apps.decisionService.port }}"
 - name: SEED_BANK_REDIRECT_URI
