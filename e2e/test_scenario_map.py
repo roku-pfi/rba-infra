@@ -71,6 +71,8 @@ def test_switch_to_active_lets_a_usual_login_in(martin, console):
     assert login.landed.startswith(BANK)
     assert (d["engine_mode"], d["action"], d["enforced_action"]) == ("ACTIVE", "ALLOW", "ALLOW")
     assert d["risk_level"] == "LOW"
+    # RF-02: the browser he has been using is a device he completed logins on.
+    assert ("signal_familiar", "device_id") in {(r["code"], r["signal"]) for r in d["reasons"]}, why(d)
 
 
 def test_impossible_travel_is_challenged_and_marked_simulated(martin, console, presenter):

@@ -38,6 +38,7 @@ SUFFIX = os.environ.get("E2E_PASSWORD_SUFFIX", "demo")
 PRESENTER_SECRET = os.environ.get("E2E_PRESENTER_SECRET", "")
 
 SESSION_KEY = "rba.idp.session"  # rba_idp/web/static/login.js
+DEVICE_COOKIE = "rokusec_device"  # rba_idp/devices.py
 TENANT_HEADER = "X-RokuSec-Tenant"
 POLICY_CACHE_SECONDS = 5  # rba_decision_service.config.policy_cache_seconds
 # Panels of the hosted login that end a step (login.js `panels`).
@@ -232,8 +233,16 @@ class Persona:
         raise AssertionError(f"login did not settle; at {p.url}")
 
     def forget_sessions(self) -> None:
-        """A fresh visit: no app cookies, no IdP session in this tab."""
-        self.page.context.clear_cookies()
+        """A fresh visit: no app cookies, no IdP session in this tab.
+
+        The IdP's device cookie stays, as it does in a person's browser: it
+        is how the engine knows this device (RF-02, ADR-0047).
+        """
+        context = self.page.context
+        device = [c for c in context.cookies() if c["name"] == DEVICE_COOKIE]
+        context.clear_cookies()
+        if device:
+            context.add_cookies(device)
         if _host(self.page.url) == _host(IDP):
             self.page.evaluate(f"sessionStorage.removeItem('{SESSION_KEY}')")
 

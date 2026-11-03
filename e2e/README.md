@@ -15,7 +15,7 @@ E2E_HEADED=1 make e2e          # watch the browsers
 | Test | Scene |
 |---|---|
 | `test_monitor_mode_applies_the_base_policy` | Monitor: passkey every time; engine would allow |
-| `test_switch_to_active_lets_a_usual_login_in` | Diego switches to active; Martín goes straight in |
+| `test_switch_to_active_lets_a_usual_login_in` | Diego switches to active; Martín goes straight in, on a device the engine knows (RF-02) |
 | `test_impossible_travel_is_challenged_and_marked_simulated` | Signed ticket from Japan: passkey, `simulated` |
 | `test_login_from_tokyo_stops_at_the_passkey` | Attacker with the real password, hosting network in JP |
 | `test_stuffing_burst_makes_the_next_login_reauthenticate` | 3 failures from 3 regions → REAUTHENTICATE |
