@@ -63,25 +63,30 @@ def activation_code(email: str, tenant: str) -> str:
     return out.split()[0]
 
 
-_READ_FAILURES = (
-    "import json, os, redis, sys; "
-    "r = redis.Redis.from_url(os.environ['REDIS_URL'], decode_responses=True); "
-    "raw = r.get('rba:profile:' + sys.argv[1]); "
-    "print(len(json.loads(raw).get('failed_login_ts', [])) if raw else 0)"
+# rba_decision_service.guard._keys: failures from places the user does not
+# use, the counter the burst step-up reads (ADR-0045).
+_READ_FOREIGN_FAILURES = (
+    "import os, redis, sys; "
+    "r = redis.Redis.from_url(os.environ['REDIS_URL']); "
+    "print(r.zcard(f'rba:guard:{sys.argv[1]}:user:{sys.argv[2]}:foreign'))"
 )
 
 
-def failed_logins(user_id: str) -> int:
-    """Failures in the user's window, read where the PDP reads them (the
-    profile store), from inside the profile-service pod: works on k3d and EKS."""
-    out = kubectl("-n", "rba", "exec", "deploy/profile-service", "-c", "profile-service", "--",
-                  "python", "-c", _READ_FAILURES, user_id)
+def failed_logins(user_id: str, tenant: str = "roku-bank") -> int:
+    """Failures from unfamiliar contexts in the user's window, read where the
+    PDP reads them (Valkey), from inside its pod: works on k3d and EKS.
+
+    Not the profile's failure list: a simulated attack (the local stand-in,
+    ADR-0032) never reaches the profile, but the guard counts it.
+    """
+    out = kubectl("-n", "rba", "exec", "deploy/decision-service", "-c", "decision-service", "--",
+                  "python", "-c", _READ_FOREIGN_FAILURES, tenant, user_id)
     return int(out.strip())
 
 
 def wait_for_failures(user_id: str, at_least: int, timeout: float = 120) -> int:
-    """Failures travel journal → queue → profile-service; under a backlog (after
-    the load scene) that takes a while. Wait for them instead of guessing."""
+    """The PDP counts a failure as it decides it; wait for the count anyway, so
+    a slow attack path (Lambdas abroad) does not race the next login."""
     deadline = time.monotonic() + timeout
     while (n := failed_logins(user_id)) < at_least:
         if time.monotonic() > deadline:
