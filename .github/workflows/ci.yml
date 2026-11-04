@@ -1,5 +1,5 @@
 # rba-infra's own checks: the charts render and lint, the attacker Lambda's
-# tests pass. The e2e needs a running cluster and stays manual (make e2e).
+# tests pass. The e2e runs nightly on k3d (e2e.yml) and by hand (make e2e).
 name: ci
 
 on:

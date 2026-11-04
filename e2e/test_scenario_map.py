@@ -15,7 +15,7 @@ from urllib.parse import quote
 
 import pytest
 
-from conftest import BANK, KAZE, kubectl, wait_for_failures, wait_for_profiles_to_catch_up
+from conftest import BANK, KAZE, _persona, kubectl, wait_for_failures, wait_for_profiles_to_catch_up
 
 MARTIN = "usr_rb_martin"
 # A fresh cloud profile has no history: Martín's first logins are challenged
@@ -202,6 +202,42 @@ def test_engine_down_falls_back_to_a_passkey_never_a_lockout(martin):
     finally:
         kubectl("-n", "rba", "scale", "deploy/decision-service", f"--replicas={replicas}")
         kubectl("-n", "rba", "rollout", "status", "deploy/decision-service", "--timeout=180s")
+
+
+def test_new_customer_activates_inside_the_login(browser, console):
+    """Diego adds a customer who must always use a passkey and gives them a code.
+    The login asks for a passkey they lack; they type the code there, create
+    one, and reach the bank without leaving the login (ADR-0037)."""
+    stamp = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+    newcomer = _persona(browser, f"alta-{stamp}@correo.example", "roku-bank", enroll=False)
+    created = console.post("/users", json={"email": newcomer.email, "password": newcomer.password})
+    assert created.status_code == 201, created.text
+    user_id = created.json()["user_id"]
+    try:
+        assert console.post("/groups/grp_rb_customers/members", json={"user_id": user_id}).status_code == 200
+        assert console.patch(f"/users/{user_id}", json={"always_passkey": True}).status_code == 200
+        code = console.post(f"/users/{user_id}/activation-code").json()["code"]
+
+        first = newcomer.login(f"{BANK}/")
+        assert first.outcome == "SECOND_FACTOR_MISSING" and first.panel == "nofactor", first
+
+        page = newcomer.page
+        page.fill("#activation-code", code)
+        page.click("#activate-submit")
+        page.wait_for_selector("#panel-enroll:not([hidden])", timeout=10_000)
+        # Creating the passkey sends the login again; "passkey siempre" asks for it.
+        page.click("#enroll-submit")
+        page.wait_for_selector("#panel-challenge:not([hidden])", timeout=15_000)
+        page.wait_for_function("!document.getElementById('mfa-submit').disabled", timeout=10_000)
+        page.click("#mfa-submit")
+        page.wait_for_url(f"{BANK}/**", timeout=20_000)
+
+        users = {u["user_id"]: u for u in console.get("/users").json()}
+        assert users[user_id]["passkeys"] == 1
+    finally:
+        console.patch(f"/users/{user_id}", json={"enabled": False})
+        console.delete(f"/groups/grp_rb_customers/members/{user_id}")
+        newcomer.page.context.close()
 
 
 def test_kaze_admin_reaches_every_page(lucas):

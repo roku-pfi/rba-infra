@@ -281,6 +281,15 @@ class Console:
     def put(self, path: str, **kw) -> httpx.Response:
         return self._http.put(f"/admin/api{path}", **kw)
 
+    def post(self, path: str, **kw) -> httpx.Response:
+        return self._http.post(f"/admin/api{path}", **kw)
+
+    def patch(self, path: str, **kw) -> httpx.Response:
+        return self._http.patch(f"/admin/api{path}", **kw)
+
+    def delete(self, path: str, **kw) -> httpx.Response:
+        return self._http.delete(f"/admin/api{path}", **kw)
+
     def decision(self, event_id: str, wait: float = 15) -> dict:
         """The recorded decision. The record is written asynchronously, so wait for it."""
         deadline = time.monotonic() + wait
@@ -342,7 +351,7 @@ def browser() -> Browser:
         b.close()
 
 
-def _persona(browser: Browser, email: str, tenant: str) -> Persona:
+def _persona(browser: Browser, email: str, tenant: str, *, enroll: bool = True) -> Persona:
     context = browser.new_context(locale="es-AR")
     page = context.new_page()
     cdp = context.new_cdp_session(page)
@@ -353,7 +362,8 @@ def _persona(browser: Browser, email: str, tenant: str) -> Persona:
         "automaticPresenceSimulation": True,
     }})
     persona = Persona(email, tenant, page)
-    persona.enroll()
+    if enroll:
+        persona.enroll()
     return persona
 
 

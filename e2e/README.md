@@ -12,6 +12,9 @@ E2E_LOAD=1 make e2e            # plus the load scene, ~2.5 min
 E2E_HEADED=1 make e2e          # watch the browsers
 ```
 
+CI: `.github/workflows/e2e.yml` builds every service from main on a fresh k3d
+cluster and runs this file nightly (and from the Actions tab, "Run workflow").
+
 | Test | Scene |
 |---|---|
 | `test_monitor_mode_applies_the_base_policy` | Monitor: passkey every time; engine would allow |
@@ -21,6 +24,7 @@ E2E_HEADED=1 make e2e          # watch the browsers
 | `test_stuffing_burst_makes_the_next_login_reauthenticate` | 3 failures from 3 regions → REAUTHENTICATE |
 | `test_sustained_stuffing_blocks_the_next_login` | 12 failures → BLOCK, no challenge |
 | `test_engine_down_falls_back_to_a_passkey_never_a_lockout` | PDP scaled to 0 → passkey, still gets in |
+| `test_new_customer_activates_inside_the_login` | New customer, "passkey siempre", no passkey: types Diego's code on the login, creates one, gets in |
 | `test_kaze_admin_reaches_every_page` | Lucas (admin): Inicio, Proyectos, Configuración |
 | `test_kaze_viewer_reads_but_cannot_change` | Valen (viewer): read-only, POST 403, settings 403 |
 | `test_tenants_are_isolated` | Diego sees no Kaze Labs user or decision |

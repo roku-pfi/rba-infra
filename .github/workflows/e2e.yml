@@ -1,0 +1,63 @@
+# The scenario map (ADR-0035) end to end, on a throwaway k3d cluster: every
+# service built from main, the real hosted login in Chromium with a virtual
+# passkey, the console's API as Diego. Nightly and on demand; the load scene
+# stays out (E2E_LOAD), and so does AWS (make aws-up is per session).
+name: e2e
+
+on:
+  schedule:
+    - cron: "17 6 * * *"   # 03:17 in Buenos Aires
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: e2e
+  cancel-in-progress: false
+
+jobs:
+  k3d:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: src/rba-infra
+      # The Dockerfiles build from the polyrepo root, so every repo sits side
+      # by side under ./src as on a laptop.
+      - name: Check out the services
+        run: |
+          for repo in rba-contracts rba-features rba-decision-service rba-idp \
+                      rba-event-publisher rba-profile-service rba-audit-service \
+                      rba-demo-banking rba-demo-kaze; do
+            git clone --depth 1 "https://github.com/${{ github.repository_owner }}/$repo.git" "src/$repo"
+          done
+      - uses: azure/setup-helm@v4
+      - name: Install k3d
+        run: curl -fsSL https://raw.githubusercontent.com/k3d-io/k3d/v5.9.0/install.sh | TAG=v5.9.0 bash
+      # Chromium resolves *.localhost by itself; httpx asks the system.
+      - name: Resolve the demo hosts
+        run: echo "127.0.0.1 demo.localhost kaze.localhost" | sudo tee -a /etc/hosts
+      - name: Cluster up
+        run: src/rba-infra/scripts/k3d-up.sh
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install the e2e runner
+        working-directory: src/rba-infra/e2e
+        run: |
+          python -m venv .venv
+          .venv/bin/pip install -q -r requirements.txt
+          .venv/bin/python -m playwright install --with-deps chromium
+      - name: Scenario map
+        run: src/rba-infra/scripts/e2e.sh -rA
+      - name: Cluster state on failure
+        if: failure()
+        run: |
+          kubectl --context k3d-rba get pods -A
+          for d in idp decision-service profile-service event-publisher audit-service; do
+            echo "::group::$d"
+            kubectl --context k3d-rba -n rba logs "deploy/$d" --all-containers --tail=200 || true
+            echo "::endgroup::"
+          done
