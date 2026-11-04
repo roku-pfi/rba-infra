@@ -23,6 +23,9 @@ spec:
         - name: profile-service
           image: {{ include "rba.image" (dict "root" . "name" .Values.apps.profileService.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: 9102
           env:
             - name: INIT_ON_STARTUP
               value: "{{ include "rba.initOnStartup" $ }}"

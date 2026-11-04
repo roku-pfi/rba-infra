@@ -113,7 +113,7 @@ def wait_for_profiles_to_catch_up(timeout: float = 600) -> None:
         out = kubectl("-n", "rba", "exec", "deploy/rabbitmq", "--",
                       "rabbitmqctl", "-q", "list_queues", "name", "messages", timeout=120)
         queued = sum(int(n) for name, n in (l.split() for l in out.splitlines() if l.strip())
-                     if name.startswith("rba.profile."))
+                     if name.startswith("rba.profile.") and not name.endswith(".dlq"))
         if journal == 0 and queued == 0:
             return
         if time.monotonic() > deadline:

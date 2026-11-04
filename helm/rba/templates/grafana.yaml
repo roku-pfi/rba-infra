@@ -57,6 +57,9 @@ spec:
     metadata:
       labels:
         {{- include "rba.selector" (dict "root" . "name" "grafana") | nindent 8 }}
+      annotations:
+        # A changed dashboard restarts Grafana on upgrade.
+        rba.infra/dashboards: {{ .Files.Get "dashboards/pdp.json" | sha256sum | quote }}
     spec:
       initContainers:
         {{- include "rba.wait" (dict "name" "prometheus" "host" "prometheus" "port" 9090 "image" .Values.images.wait) | nindent 8 }}

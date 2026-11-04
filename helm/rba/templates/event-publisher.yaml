@@ -24,6 +24,9 @@ spec:
         - name: event-publisher
           image: {{ include "rba.image" (dict "root" . "name" .Values.apps.eventPublisher.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: 9101
           env:
             # The decision journal's stream (ADR-0044).
             - name: REDIS_URL

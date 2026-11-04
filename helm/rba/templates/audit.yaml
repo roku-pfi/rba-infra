@@ -22,6 +22,9 @@ spec:
         - name: audit-service
           image: {{ include "rba.image" (dict "root" . "name" .Values.apps.auditService.image) | quote }}
           imagePullPolicy: {{ .Values.images.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: 9103
           env:
             - name: INIT_ON_STARTUP
               value: "{{ include "rba.initOnStartup" $ }}"
