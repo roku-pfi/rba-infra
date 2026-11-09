@@ -42,7 +42,7 @@ DEVICE_COOKIE = "rokusec_device"  # rba_idp/devices.py
 TENANT_HEADER = "X-RokuSec-Tenant"
 POLICY_CACHE_SECONDS = 5  # rba_decision_service.config.policy_cache_seconds
 # Panels of the hosted login that end a step (login.js `panels`).
-END_PANELS = ("challenge", "blocked", "denied", "nofactor", "unavailable", "offer", "session")
+END_PANELS = ("challenge", "blocked", "denied", "nofactor", "unavailable", "offer", "attempts", "session")
 
 
 def kubectl(*args: str, timeout: int = 180) -> str:
@@ -142,6 +142,8 @@ class Persona:
     tenant: str
     page: Page
     password: str = field(init=False)
+    # The "someone tried to get into your account" notices this person saw.
+    warnings: list[str] = field(init=False, default_factory=list)
 
     def __post_init__(self) -> None:
         self.password = f"{self.email.split('@', 1)[0]}-{SUFFIX}"
@@ -235,6 +237,11 @@ class Persona:
                 if p.locator(f"#panel-{name}:not([hidden])").count():
                     if name == "offer":
                         p.click("#offer-skip")
+                        break
+                    if name == "attempts":
+                        # "Alguien intentó ingresar a tu cuenta": noted, then on.
+                        self.warnings.append(p.inner_text("#attempts-facts"))
+                        p.click("#attempts-skip")
                         break
                     return name
             p.wait_for_timeout(200)

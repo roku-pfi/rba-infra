@@ -169,11 +169,14 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
         assert set(outcomes[:first]) <= {"INVALID_CREDENTIALS"}, region
         assert set(outcomes[first:]) == {"BLOCKED"}, region
 
+    martin.warnings.clear()
     login = martin.login(f"{BANK}/")
     d = console.decision(login.event_id)
     assert login.challenged and login.landed.startswith(BANK), why(d)
     assert d["enforced_action"] == "REAUTHENTICATE", why(d)
     assert "failed_login_burst" in codes(d) and "source_blocked" not in codes(d), why(d)
+    # His right password was refused from the attacker's IP: once in, he is told.
+    assert martin.warnings and "lo bloqueamos" in martin.warnings[-1], martin.warnings
 
     presenter.post("/reset", mode="failures")
 
