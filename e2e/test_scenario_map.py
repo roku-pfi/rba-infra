@@ -156,6 +156,8 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     blocked, the real password included. Martín is not locked out: his next
     login asks for the passkey (ADR-0045)."""
     presenter.post("/reset", mode="failures")
+    # Martín is in the bank while the attack runs.
+    martin.login(f"{BANK}/")
     regions = presenter.post("/attack/stuffing", level="lockout")["regions"]
     for region in regions:
         outcomes = [a["outcome"] for a in region["attempts"]]
@@ -168,6 +170,11 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
         assert first < 10, region
         assert set(outcomes[:first]) <= {"INVALID_CREDENTIALS"}, region
         assert set(outcomes[first:]) == {"BLOCKED"}, region
+
+    # Still signed in, he is told: the bank's banner, without signing in again.
+    martin.page.goto(f"{BANK}/")
+    martin.page.wait_for_selector("#attempts:not([hidden])", timeout=20_000)
+    assert "lo bloqueamos" in martin.page.inner_text("#attempts")
 
     martin.warnings.clear()
     login = martin.login(f"{BANK}/")
