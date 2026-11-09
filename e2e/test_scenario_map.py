@@ -158,9 +158,16 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     presenter.post("/reset", mode="failures")
     regions = presenter.post("/attack/stuffing", level="lockout")["regions"]
     for region in regions:
-        *wrong, right = region["attempts"]
-        assert len(wrong) == 10 and all(a["outcome"] == "INVALID_CREDENTIALS" for a in wrong), region
-        assert right["outcome"] == "BLOCKED", region
+        outcomes = [a["outcome"] for a in region["attempts"]]
+        assert len(outcomes) == 11 and outcomes[-1] == "BLOCKED", region
+        # The wrong password that reaches the threshold is already answered
+        # "blocked", and so is everything after it: the right password, last,
+        # looks like the wrong ones before it. (On k3d the three regions share
+        # one IP, so the block can start earlier than the tenth.)
+        first = outcomes.index("BLOCKED")
+        assert first < 10, region
+        assert set(outcomes[:first]) <= {"INVALID_CREDENTIALS"}, region
+        assert set(outcomes[first:]) == {"BLOCKED"}, region
 
     login = martin.login(f"{BANK}/")
     d = console.decision(login.event_id)
@@ -175,8 +182,12 @@ def test_martins_own_wrong_passwords_pause_his_account(martin, console, presente
     """Five wrong passwords from his own laptop, then the right one: paused for a
     while (ADR-0045). The cooldown, not the attacker, is what can block him."""
     presenter.post("/reset", mode="failures")
-    for _ in range(5):
+    for _ in range(4):
         assert martin.wrong_password(f"{BANK}/") == "INVALID_CREDENTIALS"
+    # The fifth wrong password starts the pause and already says so: the
+    # right one that follows gets the same screen, so it confirms nothing.
+    assert martin.wrong_password(f"{BANK}/") == "BLOCKED"
+    assert martin.page.locator("#blocked-title").inner_text() == "Demasiados intentos"
 
     login = martin.login(f"{BANK}/")
     d = console.decision(login.event_id)

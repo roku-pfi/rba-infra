@@ -186,9 +186,12 @@ class Persona:
         return Login(outcome, challenged, panel, p.url, event_id)
 
     def wrong_password(self, start_url: str) -> str | None:
-        """One attempt with a wrong password; the IdP's answer (INVALID_CREDENTIALS)."""
+        """One attempt with a wrong password; the IdP's answer: INVALID_CREDENTIALS,
+        or BLOCKED once the attempts paused the account (ADR-0045)."""
         answer = self._submit(start_url, f"{self.password}-typo")
-        self.page.wait_for_selector("#login-error:not([hidden])", timeout=10_000)
+        self.page.wait_for_selector(
+            "#login-error:not([hidden]), #panel-blocked:not([hidden])", timeout=10_000
+        )
         return answer.get("outcome")
 
     def _submit(self, start_url: str, password: str) -> dict:
