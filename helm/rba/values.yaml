@@ -34,13 +34,16 @@ dataPlane:
     image: redis:7-alpine
     persistence:
       size: 1Gi
+    # The decision journal keeps each decision a day (ADR-0044): a load run
+    # adds ~18k of them (~35 MiB). At 128Mi a few runs got Redis OOM-killed in
+    # a loop, losing the guard's counters (no IP block) on every restart.
     resources:
       requests:
         cpu: 25m
-        memory: 32Mi
+        memory: 64Mi
       limits:
         cpu: 250m
-        memory: 128Mi
+        memory: 512Mi
   postgres:
     enabled: true
     host: postgres

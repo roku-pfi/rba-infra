@@ -188,6 +188,31 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     presenter.post("/reset", mode="failures")
 
 
+def _change_password_on_rokusecs_page(page, current: str, new: str) -> None:
+    """From the bank: RokuSec's page in Roku Bank's look, confirmed with the passkey."""
+    page.goto(f"{BANK}/clave")
+    page.wait_for_selector("#current-password", timeout=15_000)
+    assert not page.url.startswith(BANK), page.url  # the passkey's domain, not the bank's
+    page.wait_for_function("!document.getElementById('password-submit').disabled", timeout=10_000)
+    page.fill("#current-password", current)
+    page.fill("#new-password", new)
+    page.fill("#new-password-again", new)
+    page.click("#password-submit")
+    page.wait_for_selector("#password-done:not([hidden])", timeout=20_000)
+    page.click("#password-back")
+    page.wait_for_url(f"{BANK}/**", timeout=15_000)
+
+
+def test_martin_changes_his_password_with_his_passkey(martin):
+    """Cambiar contraseña in the bank: RokuSec's page asks for the passkey too,
+    then brings him back to the bank, still signed in (contracts 0.25.0)."""
+    martin.login(f"{BANK}/")
+    changed = f"{martin.password}-nueva"
+    _change_password_on_rokusecs_page(martin.page, martin.password, changed)
+    assert martin.page.locator("text=Hola").count(), "back in the bank, signed in"
+    _change_password_on_rokusecs_page(martin.page, changed, martin.password)
+
+
 def test_martins_own_wrong_passwords_pause_his_account(martin, console, presenter):
     """Five wrong passwords from his own laptop, then the right one: paused for a
     while (ADR-0045). The cooldown, not the attacker, is what can block him."""
