@@ -65,7 +65,10 @@ else
 fi
 
 echo "==> importing images into k3d"
-k3d image import \
+# --mode direct streams each image into the node. The default (a tools node
+# and a tarball) has lost the tarball and still reported "Successfully
+# imported", leaving the cluster on the previous build.
+k3d image import --mode direct \
   "rba-decision-service:${TAG}" \
   "rba-idp:${TAG}" \
   "rba-event-publisher:${TAG}" \
@@ -79,7 +82,7 @@ echo "==> pulling observability images"
 docker pull prom/prometheus:v2.55.1
 docker pull grafana/grafana:11.4.0
 docker pull registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0
-k3d image import \
+k3d image import --mode direct \
   prom/prometheus:v2.55.1 \
   grafana/grafana:11.4.0 \
   registry.k8s.io/kube-state-metrics/kube-state-metrics:v2.14.0 \
