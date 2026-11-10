@@ -174,7 +174,7 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     # Still signed in, he is told: the bank's banner, without signing in again.
     martin.page.goto(f"{BANK}/")
     martin.page.wait_for_selector("#attempts:not([hidden])", timeout=20_000)
-    assert "lo bloqueamos" in martin.page.inner_text("#attempts")
+    assert "ingreso sospechoso desde" in martin.page.inner_text("#attempts")
 
     martin.warnings.clear()
     login = martin.login(f"{BANK}/")
@@ -183,7 +183,7 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     assert d["enforced_action"] == "REAUTHENTICATE", why(d)
     assert "failed_login_burst" in codes(d) and "source_blocked" not in codes(d), why(d)
     # His right password was refused from the attacker's IP: once in, he is told.
-    assert martin.warnings and "lo bloqueamos" in martin.warnings[-1], martin.warnings
+    assert martin.warnings and "Ingreso sospechoso desde" in martin.warnings[-1], martin.warnings
 
     presenter.post("/reset", mode="failures")
 
