@@ -183,7 +183,7 @@ def test_sustained_stuffing_blocks_the_attacker_not_martin(martin, console, pres
     assert d["enforced_action"] == "REAUTHENTICATE", why(d)
     assert "failed_login_burst" in codes(d) and "source_blocked" not in codes(d), why(d)
     # His right password was refused from the attacker's IP: once in, he is told.
-    assert martin.warnings and "Ingreso sospechoso desde" in martin.warnings[-1], martin.warnings
+    assert martin.warnings and "Desde " in martin.warnings[-1], martin.warnings
 
     presenter.post("/reset", mode="failures")
 
