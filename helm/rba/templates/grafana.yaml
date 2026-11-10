@@ -80,6 +80,9 @@ spec:
               {{- end }}
             - name: GF_USERS_ALLOW_SIGN_UP
               value: "false"
+            # The dashboard is shown in Spanish, like the console.
+            - name: GF_USERS_DEFAULT_LANGUAGE
+              value: es-ES
             - name: GF_AUTH_ANONYMOUS_ENABLED
               value: "true"
             - name: GF_AUTH_ANONYMOUS_ORG_ROLE

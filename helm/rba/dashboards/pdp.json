@@ -11,7 +11,7 @@
     {
       "id": 7,
       "type": "table",
-      "title": "Alarmas activas (RF-16)",
+      "title": "Alarmas activas",
       "gridPos": {
         "h": 7,
         "w": 24,
@@ -62,13 +62,89 @@
         "defaults": {
           "noValue": "Sin alarmas"
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Alarma"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "CredentialStuffing": {
+                        "text": "Muchas contraseñas incorrectas"
+                      },
+                      "SourceBlocked": {
+                        "text": "IP bloqueada"
+                      },
+                      "AccountUnderAttack": {
+                        "text": "Cuenta atacada"
+                      },
+                      "HighBlockRate": {
+                        "text": "Muchos inicios bloqueados"
+                      },
+                      "EngineFallback": {
+                        "text": "Motor en respaldo"
+                      },
+                      "EngineUnavailable": {
+                        "text": "Motor no disponible"
+                      },
+                      "DecisionLatencyHigh": {
+                        "text": "Latencia de decisión alta"
+                      },
+                      "EventRelayDown": {
+                        "text": "Relay de eventos caído"
+                      },
+                      "EventLagHigh": {
+                        "text": "Eventos con atraso"
+                      },
+                      "EventsDeadLettered": {
+                        "text": "Eventos sin aplicar"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Severidad"
+            },
+            "properties": [
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "type": "value",
+                    "options": {
+                      "critical": {
+                        "text": "Crítica"
+                      },
+                      "warning": {
+                        "text": "Advertencia"
+                      },
+                      "info": {
+                        "text": "Aviso"
+                      }
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
       }
     },
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Evaluate request rate",
+      "title": "Evaluaciones por segundo",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -81,7 +157,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix:/s",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -100,7 +176,7 @@
       "targets": [
         {
           "expr": "sum(rate(http_request_duration_seconds_count{handler=\"/risk/evaluate\"}[1m]))",
-          "legendFormat": "req/s",
+          "legendFormat": "evaluaciones/s",
           "refId": "A"
         }
       ]
@@ -108,7 +184,7 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Evaluate latency (p95 / p99)",
+      "title": "Latencia de evaluación (p95 / p99)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -153,7 +229,7 @@
     {
       "id": 3,
       "type": "timeseries",
-      "title": "Decision mix",
+      "title": "Decisiones por resultado",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -166,7 +242,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "reqps",
+          "unit": "suffix:/s",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 40,
@@ -177,7 +253,56 @@
             }
           }
         },
-        "overrides": []
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "ALLOW"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Permitido"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "REQUIRE_MFA"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Pidió passkey"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "REAUTHENTICATE"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Reautenticación"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "BLOCK"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Bloqueado"
+              }
+            ]
+          }
+        ]
       },
       "options": {
         "legend": {
@@ -197,7 +322,7 @@
     {
       "id": 4,
       "type": "heatmap",
-      "title": "Risk score distribution",
+      "title": "Distribución del puntaje de riesgo",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -232,7 +357,7 @@
     {
       "id": 5,
       "type": "timeseries",
-      "title": "PDP HPA replicas",
+      "title": "Réplicas del motor (HPA)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -266,22 +391,22 @@
       "targets": [
         {
           "expr": "kube_horizontalpodautoscaler_status_current_replicas{horizontalpodautoscaler=\"decision-service\"}",
-          "legendFormat": "current",
+          "legendFormat": "actuales",
           "refId": "A"
         },
         {
           "expr": "kube_horizontalpodautoscaler_status_desired_replicas{horizontalpodautoscaler=\"decision-service\"}",
-          "legendFormat": "desired",
+          "legendFormat": "deseadas",
           "refId": "B"
         },
         {
           "expr": "kube_horizontalpodautoscaler_spec_min_replicas{horizontalpodautoscaler=\"decision-service\"}",
-          "legendFormat": "min",
+          "legendFormat": "mínimo",
           "refId": "C"
         },
         {
           "expr": "kube_horizontalpodautoscaler_spec_max_replicas{horizontalpodautoscaler=\"decision-service\"}",
-          "legendFormat": "max",
+          "legendFormat": "máximo",
           "refId": "D"
         }
       ]
@@ -289,7 +414,7 @@
     {
       "id": 6,
       "type": "timeseries",
-      "title": "HPA CPU (current vs target)",
+      "title": "CPU del motor (actual y objetivo del HPA)",
       "gridPos": {
         "h": 8,
         "w": 12,
@@ -320,13 +445,13 @@
       },
       "targets": [
         {
-          "expr": "kube_horizontalpodautoscaler_status_target_metric{horizontalpodautoscaler=\"decision-service\",metric_name=\"cpu\"}",
-          "legendFormat": "current {{metric_target_type}}",
+          "expr": "kube_horizontalpodautoscaler_status_target_metric{horizontalpodautoscaler=\"decision-service\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
+          "legendFormat": "actual",
           "refId": "A"
         },
         {
-          "expr": "kube_horizontalpodautoscaler_spec_target_metric{horizontalpodautoscaler=\"decision-service\",metric_name=\"cpu\"}",
-          "legendFormat": "target {{metric_target_type}}",
+          "expr": "kube_horizontalpodautoscaler_spec_target_metric{horizontalpodautoscaler=\"decision-service\",metric_name=\"cpu\",metric_target_type=\"utilization\"}",
+          "legendFormat": "objetivo",
           "refId": "B"
         }
       ]
@@ -334,7 +459,7 @@
     {
       "id": 8,
       "type": "timeseries",
-      "title": "Journal backlog (ADR-0044)",
+      "title": "Decisiones sin publicar",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -366,12 +491,12 @@
       "targets": [
         {
           "expr": "max(rba_journal_backlog)",
-          "legendFormat": "unrelayed events",
+          "legendFormat": "sin publicar",
           "refId": "A"
         },
         {
           "expr": "max(rba_journal_oldest_seconds)",
-          "legendFormat": "oldest (s)",
+          "legendFormat": "la más antigua (s)",
           "refId": "B"
         }
       ]
@@ -379,7 +504,7 @@
     {
       "id": 9,
       "type": "timeseries",
-      "title": "Queues and dead letters",
+      "title": "Colas y mensajes fallidos",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -419,7 +544,7 @@
     {
       "id": 10,
       "type": "timeseries",
-      "title": "Decision → profile lag (p95)",
+      "title": "Atraso de decisión a perfil (p95)",
       "gridPos": {
         "h": 8,
         "w": 8,
@@ -432,7 +557,7 @@
       },
       "fieldConfig": {
         "defaults": {
-          "unit": "s",
+          "unit": "suffix: s",
           "custom": {
             "drawStyle": "line",
             "fillOpacity": 15,
@@ -473,7 +598,7 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "RBA PDP",
+  "title": "RokuSec · motor de decisión",
   "uid": "rba-pdp",
   "version": 1
 }

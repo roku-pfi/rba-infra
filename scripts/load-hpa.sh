@@ -132,7 +132,7 @@ kubectl --context "$KUBE_CONTEXT" -n "$NS" logs "job/${JOB}" --tail=20 || true
 
 echo
 echo "RESULT before_current=${before_current:-?} max_current=${max_current} max_desired=${max_desired} moved=${moved}"
-echo "Grafana: http://localhost:8080/grafana  (dashboards → RBA / RBA PDP)"
+echo "Grafana: http://localhost:8080/grafana  (dashboards → RBA / RokuSec · motor de decisión)"
 
 if [[ "$moved" -ne 1 ]]; then
   echo "HPA did not add a replica within the wait window. Check metrics-server and Job logs." >&2

@@ -72,7 +72,7 @@ creates cluster `rba` if missing, imports images, and
 |---|---|
 | http://localhost:8080/login | Hosted IdP login |
 | http://localhost:8080/admin | Admin console |
-| http://localhost:8080/grafana | Grafana (admin/admin; anonymous Viewer). Dashboard **RBA / RBA PDP** |
+| http://localhost:8080/grafana | Grafana (admin/admin; anonymous Viewer). Dashboard **RBA / RokuSec · motor de decisión** |
 
 PDP is ClusterIP only (`decision-service:8000` inside the cluster). To curl
 it from the laptop:

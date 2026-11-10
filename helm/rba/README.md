@@ -25,6 +25,6 @@ replicas within that window and survives restarts. The image's
 `config/policies/*.yaml` only seed tenants that have no row yet.
 
 Grafana: http://localhost:8080/grafana (`admin` / `admin`). Provisioned dashboard
-**RBA / RBA PDP** (decision mix, score heatmap, p95/p99, HPA replicas). Load the
+**RBA / RokuSec · motor de decisión** (decisiones por resultado, puntaje de riesgo, p95/p99, réplicas del HPA). Load the
 HPA with `../../scripts/load-hpa.sh`. When the HPA is enabled the Deployment
 omits `spec.replicas` so Helm does not fight the scale subresource.
